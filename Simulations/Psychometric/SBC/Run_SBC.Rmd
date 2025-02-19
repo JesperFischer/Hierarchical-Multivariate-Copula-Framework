@@ -1,0 +1,236 @@
+---
+title: "Run_SBC"
+output: html_document
+date: "2025-02-17"
+---
+
+## packages and scripts
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+packages = c("brms","tidyverse","bayesplot","pracma","here",
+             "patchwork","posterior","HDInterval","loo", "furrr", "SBC","future")
+
+do.call(pacman::p_load, as.list(packages))
+
+
+source(here::here("Simulations","Psychometric","SBC","scripts.R"))
+```
+
+
+# test one dataset:
+## make data and plot
+
+```{r}
+sim_data = generator_single(60,10)
+
+sim_data_x = sim_data[[2]]
+
+data.frame(sim_data_x) %>% ggplot(aes(x = x, y = binom_y))+geom_point()+facet_wrap(~S_id)
+data.frame(sim_data_x) %>% ggplot(aes(x = x, y = RT))+geom_point()+facet_wrap(~S_id,scales = "free")
+sim_data[[1]]
+
+```
+
+## run one the single dataset:
+```{r}
+cmdstan_model <- cmdstanr::cmdstan_model(here::here("Simulations","Psychometric","SBC","stanmodels","subj_ndt.stan"))
+
+
+fit = cmdstan_model$sample(data = sim_data_x,
+                           iter_warmup = 250,
+                           iter_sampling = 1000,
+                           chains = 4,
+                           seed = 123,
+                           refresh = 100,
+                           max_treedepth = 10,
+                           parallel_chains = 4,
+                           adapt_delta = 0.95)
+
+fit
+```
+
+
+# run for all!
+```{r}
+n_sims <- 2000 # Number of SBC iterations to run
+
+generator <- SBC_generator_function(generator_single, N = 60, S = 10)
+
+dataset <- generate_datasets(
+  generator, 
+  n_sims)
+
+backend <- SBC_backend_cmdstan_sample(
+  cmdstan_model, iter_warmup = 1000, 
+  iter_sampling = 2000,
+  chains = 4, 
+  max_treedepth = 10,
+  parallel_chains = 4, 
+  adapt_delta = 0.95)
+
+
+library(future)
+cores = 20
+plan(multisession, workers = cores)
+
+results <- compute_SBC(dataset,
+                       ensure_num_ranks_divisor = 4,
+                       keep_fits = F,
+                       thin_ranks = 20,
+                       #cores_per_fit = 10,
+                       backend)
+
+
+save.image(here::here("Simulations","Psychometric","SBC","results","2000.RData"))
+
+```
+
+# load and removed badly or non-converged sims
+```{r}
+load(here::here("Simulations","Psychometric","SBC","results","2000.RData"))
+
+results_psycho = results
+
+
+# remove divergence and max tree depth:
+sim_ids_to_keep <- results_psycho$backend_diagnostics %>%
+  dplyr::filter(n_divergent == 0 & n_max_treedepth == 0) %>%
+  dplyr::pull(sim_id)
+
+
+sim_ids_to_exclude <- results_psycho$backend_diagnostics %>%
+  dplyr::filter(n_divergent != 0 | n_max_treedepth != 0) %>%
+  dplyr::pull(sim_id)
+
+
+results_subset <- results_psycho[sim_ids_to_keep]
+results_excluded <- results_psycho[sim_ids_to_exclude]
+
+# also less than 400 effective samples
+
+sim_ids_to_keep <- results_subset$default_diagnostics %>%
+  dplyr::filter(min_ess_bulk  > 400)%>%
+  dplyr::filter(min_ess_tail  > 400) %>%
+  dplyr::pull(sim_id)
+
+
+results_subset <- results_subset[sim_ids_to_keep]
+```
+
+# extraction and plotting
+
+## diverenges vs no divergences (see if there are parameter regions that are bad)
+
+```{r}
+grouplevel = results_excluded$stats %>% 
+  filter(grepl("^mu_", results_excluded$stats$variable) | grepl("^tau_", results_excluded$stats$variable)) %>% 
+  mutate(variable = gsub("\\[\\d+\\]", "", variable))%>% select(sim_id, simulated_value,variable) %>% distinct() %>% 
+  mutate(sim_id = as.factor(sim_id), excluded = T) 
+
+grouplevel_inc = results_subset$stats %>% 
+  filter(grepl("^mu_", results_subset$stats$variable) | grepl("^tau_", results_subset$stats$variable)) %>% 
+  mutate(variable = gsub("\\[\\d+\\]", "", variable))%>% select(sim_id, simulated_value,variable) %>% distinct() %>% 
+  mutate(sim_id = as.factor(sim_id), excluded = F)
+
+rbind(grouplevel,grouplevel_inc)%>% ggplot(aes(x = simulated_value, fill = excluded))+geom_histogram(col = "black")+facet_wrap(~variable, scales = "free")
+```
+
+
+```{r}
+subj_level = results_excluded$stats %>% 
+  filter(!grepl("^mu_", results_excluded$stats$variable)& !grepl("^tau_", results_excluded$stats$variable)) %>% 
+  mutate(variable = gsub("\\[\\d+\\]", "", variable))%>% select(sim_id, simulated_value,variable) %>% distinct() %>% 
+  mutate(excluded = T)
+
+subj_level_inc = results_subset$stats %>% 
+  filter(!grepl("^mu_", results_subset$stats$variable)& !grepl("^tau_", results_subset$stats$variable)) %>% 
+  mutate(variable = gsub("\\[\\d+\\]", "", variable))%>% select(sim_id, simulated_value,variable) %>% distinct()  %>% 
+  mutate(excluded = F)
+
+
+rbind(subj_level,subj_level_inc) %>% ggplot(aes(x = simulated_value, fill = excluded))+
+  geom_histogram(col = "black")+facet_wrap(~variable, scales = "free")
+```
+
+
+
+```{r}
+# Extract subject-level parameters from results2$stats
+subject_level_params <- results_subset$stats %>% 
+  filter(!grepl("^mu_", results_subset$stats$variable)& !grepl("^tau_", results_subset$stats$variable)) %>% 
+  mutate(variable = gsub("\\[\\d+\\]", "", variable)) %>% 
+  # filter(!sim_id %in% sims$sim_id) %>% 
+  mutate()
+# subject_level_params
+plot_rank_hist(subject_level_params)
+plot_sim_estimated(subject_level_params, alpha = 0.5)
+
+
+```
+
+# extract group level and plot:
+```{r}
+# Extract group-level parameters from results2$stats
+group_level_params_psycho <- results_subset$stats %>% 
+  filter(grepl("^mu_", results_subset$stats$variable) | grepl("^tau_", results_subset$stats$variable)) %>% 
+  # filter(!sim_id %in% sims$sim_id) %>% 
+  mutate()
+
+
+histograms_psycho = plot_rank_hist(group_level_params_psycho)+facet_wrap(~variable, nrow = 2)+theme_minimal()
+histograms_psycho
+```
+
+
+# only keep the group means and then also plot parameter recovery:
+
+```{r}
+means_group_level_params_psycho = group_level_params_psycho %>% filter(grepl("mu",variable))
+
+histograms_psycho = plot_rank_hist(means_group_level_params_psycho)+facet_wrap(~variable, nrow = 1)+theme_minimal()
+histograms_psycho
+
+pp_recov_psycho = plot_sim_estimated(means_group_level_params_psycho, alpha = 0.5)+facet_wrap(~variable, nrow = 1, scales = "free")+theme_minimal()+
+  theme(strip.text = element_blank())
+```
+
+# extract p-values for uniformity
+
+```{r}
+datas = data.frame()
+parameters = unique(means_group_level_params_psycho$variable)
+
+for (parameter in parameters){
+  
+  ranks = data.frame(means_group_level_params_psycho %>% filter(variable == parameter)) %>% .$rank
+  
+  observed <- table(factor(ranks, levels = 1:399))  # Force levels to include all 1:399
+  
+  # Calculate expected frequencies (uniform distribution)
+  n_ranks <- 399  # Total number of unique ranks (1:399)
+  total_count <- length(ranks)      # Total number of observations
+  expected <- rep(total_count / n_ranks, n_ranks)
+  
+  qq = chisq.test(x = observed, p = expected / total_count)
+  print(paste0("parameter = ", parameter, " p = ",qq$p.value))
+  
+  dd = data.frame(variable = parameter, pvalue = round(qq$p.value,2), chisq = round(qq$statistic,2))
+  
+  datas = rbind(dd,datas)
+}
+```
+
+# combine this and plot it:
+
+```{r}
+histograms_psycho = histograms_psycho+
+  geom_text(data = datas, aes(x = 75, y = 22, label = paste0("X^2 = ", chisq, "\np = ", pvalue)), size = 2)+
+  facet_wrap(~variable, nrow = 1)+theme_minimal()
+
+comb_psycho = (histograms_psycho + ggtitle("learning paradigm")) / pp_recov_psycho
+comb_psycho
+```
+

@@ -1,0 +1,16 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+/Figures/
+/Plots/workspace/
+/Real data/Learning/models/
+/Real data/Psychometric/models/
+
+/Simulations/Learning/SBC/results/
+/Simulations/Learning/model_recovery_estimation/results/
+
+
+/Simulations/Psychometric/SBC/results/
+/Simulations/Psychometric/model_recovery_estimation/results/
+
