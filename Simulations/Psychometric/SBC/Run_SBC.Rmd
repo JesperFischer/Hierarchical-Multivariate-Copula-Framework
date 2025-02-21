@@ -63,6 +63,8 @@ dataset <- generate_datasets(
   generator, 
   n_sims)
 
+cmdstan_model <- cmdstanr::cmdstan_model(here::here("Simulations","Psychometric","SBC","stanmodels","subj_ndt.stan"))
+
 backend <- SBC_backend_cmdstan_sample(
   cmdstan_model, iter_warmup = 1000, 
   iter_sampling = 2000,

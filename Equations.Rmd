@@ -1,0 +1,463 @@
+---
+title: "Mathematical Notation"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+# Mathematical Notation
+
+
+
+## Psychophysical
+
+
+$$
+\begin{bmatrix}
+F_1(B_t) \\
+F_2(RT_t)
+\end{bmatrix}
+\sim \mathcal{C} \Phi \left(
+\begin{bmatrix}
+1 & \rho_s \\
+\rho_s & 1
+\end{bmatrix}
+\right)
+$$
+
+
+$$
+B_t \sim \text{Bern}(E_t)
+$$
+
+$$
+RT_t \sim \mathcal{LN}(\mu_t, \sigma_s) + \delta_s
+$$
+
+$$
+\mu_t = RT_{{int}_s}+RT_{{slope}_s}\cdot H(E_t)
+$$
+
+$$
+H(E_t) = E_t \cdot log(E_t) + (1-E_t) \cdot log (1-E_t) 
+$$
+
+
+$$
+E_t =  \lambda_s + (1 - 2 \cdot \lambda_s) \cdot \frac{1}{1 + \exp(-\beta_s \cdot (X_t - \alpha_s))}
+$$
+
+$$
+\lambda_s \sim  S(\mathcal{N}(\mu_\lambda,\tau_\lambda))
+$$
+
+$$
+\alpha_s \sim  \mathcal{N}(\mu_\alpha,\tau_\alpha)
+$$
+$$
+\beta_s\sim  exp(\mathcal{N}(\mu_\beta,\tau_\beta))
+$$
+
+
+$$
+RT_{{int}_s} \sim  \mathcal{N}(\mu_{RT_{int}},\tau_{RT_{int}})
+$$
+
+$$
+RT_{{slope}_s} \sim  \mathcal{N}(\mu_{RT_{slope}},\tau_{RT_{slope}})
+$$
+
+$$
+\sigma_s \sim  exp(\mathcal{N}(\mu_\sigma,\tau_\sigma))
+$$
+
+$$
+S(x) = \frac{1}{1+exp(-x)}
+$$
+
+$$
+rho_s \sim LKJ(12)
+$$
+
+$$
+\delta_s \sim N^+(0.3,0.05)
+$$
+$$
+\mu_\lambda \sim N(-3,1)
+$$
+$$
+\tau_\lambda \sim N^+(0.6,0.2)
+$$
+
+
+$$
+\mu_\alpha \sim N(0,5)
+$$
+
+$$
+\tau_\alpha \sim N^+(5,2)
+$$
+
+
+$$
+\mu_\beta \sim N(-1.5,0.5)
+$$
+
+$$
+\tau_\beta \sim N^+(0.6,0.2)
+$$
+
+$$
+\mu_{RT_{int}} \sim N(-1,0.25)
+$$
+
+$$
+\tau_{RT_{int}} \sim N^+(0.6,0.2)
+$$
+
+
+$$
+\mu_{RT_{slope}} \sim N(1.5,0.5)
+$$
+
+$$
+\tau_{RT_{slope}} \sim N^+(0.6,0.2)
+$$
+
+
+$$
+\mu_\sigma \sim N(-1,0.25)
+$$
+
+$$
+\tau_\sigma \sim N^+(0.5,0.1)
+$$
+
+
+### DDM
+
+$$
+RT_t \sim 
+\begin{cases} 
+\text{Wiener}(\kappa_s, \delta_s, \eta_s, \nu_t), & B = 1 \\
+\text{Wiener}(\kappa_s, \delta_s, 1 - \eta_s, -\nu_t), & B = 0
+\end{cases}
+$$
+
+$$
+\nu_t = E_t - (1 - E_t) * \nu_s
+$$
+
+
+$$
+E_t =  \lambda_s + (1 - 2 \cdot \lambda_s) \cdot \frac{1}{1 + \exp(-\beta_s \cdot (X_t - \alpha_s))}
+$$
+
+
+$$
+\kappa_s \sim  exp(\mathcal{N}(\mu_\kappa,\tau_\kappa))
+$$
+
+$$
+\eta_s \sim  S(\mathcal{N}(\mu_\eta,\tau_\eta))
+$$
+
+
+$$
+\nu_s \sim  \mathcal{N}(\mu_\nu,\tau_\nu)
+$$
+
+$$
+\lambda_s \sim  S(\mathcal{N}(\mu_\lambda,\tau_\lambda))
+$$
+
+$$
+\alpha_s \sim  \mathcal{N}(\mu_\alpha,\tau_\alpha)
+$$
+$$
+\beta_s\sim  exp(\mathcal{N}(\mu_\beta,\tau_\beta))
+$$
+
+$$
+S(x) = \frac{1}{1+exp(-x)}
+$$
+
+
+$$
+\delta_s \sim N^+(0.3,0.05)
+$$
+
+
+$$
+\mu_\lambda \sim N(-3,1)
+$$
+$$
+\tau_\lambda \sim N^+(0.6,0.2)
+$$
+
+
+$$
+\mu_\alpha \sim N(0,5)
+$$
+
+$$
+\tau_\alpha \sim N^+(5,2)
+$$
+
+
+$$
+\mu_\beta \sim N(-1.5,0.5)
+$$
+
+$$
+\tau_\beta \sim N^+(0.6,0.2)
+$$
+
+
+$$
+\mu_\kappa \sim N(0.5,0.25)
+$$
+
+$$
+\tau_\kappa \sim N^+(0.4,0.1)
+$$
+
+$$
+\mu_\nu \sim N(5,0.25)
+$$
+
+$$
+\tau_\nu \sim N^+(0.5,0.1)
+$$
+
+
+$$
+\mu_\eta \sim N(0,0.1)
+$$
+
+$$
+\tau_\eta \sim N^+(0.4,0.1)
+$$
+
+
+
+
+
+
+
+
+
+
+
+## Learning
+
+
+$$
+\begin{bmatrix}
+F_1(B_t) \\
+F_2(RT_t)
+\end{bmatrix}
+\sim \mathcal{C} \Phi \left(
+\begin{bmatrix}
+1 & \rho \\
+\rho & 1
+\end{bmatrix}
+\right)
+$$
+
+$$
+B_t \sim \text{Bern}(E_t)
+$$
+
+$$
+RT_t \sim \mathcal{LN}(\mu_t, \sigma_s) + \delta_s
+$$
+
+
+$$
+\mu_t = RT_{{int}_s}+RT_{{slope}_s}\cdot H(E_t)
+$$
+
+$$
+H(E_t) = E_t \cdot log(E_t) + (1-E_t) \cdot log (1-E_t) 
+$$
+
+
+$$
+E_{t+1} = E_t + \alpha_s * (X_t - E_t) 
+$$
+
+$$
+\alpha_s \sim  S(\mathcal{N}(\mu_\alpha,\tau_\alpha))
+$$
+$$
+E_{{0_s}}\sim  S(\mathcal{N}(\mu_{E_0},\tau_{E_0}))
+$$
+
+
+$$
+RT_{{int}_s} \sim  \mathcal{N}(\mu_{RT_{int}},\tau_{RT_{int}})
+$$
+
+$$
+RT_{{slope}_s} \sim  \mathcal{N}(\mu_{RT_{slope}},\tau_{RT_{slope}})
+$$
+
+$$
+\sigma_s \sim  exp(\mathcal{N}(\mu_\sigma,\tau_\sigma))
+$$
+
+$$
+S(x) = \frac{1}{1+exp(-x)}
+$$
+
+
+
+$$
+rho_s \sim LKJ(12)
+$$
+
+$$
+\delta_s \sim N^+(0.3,0.05)
+$$
+
+$$
+\mu_\alpha \sim N(-1,1)
+$$
+
+$$
+\tau_\alpha \sim N^+(0.5,0.1)
+$$
+
+
+$$
+\mu_{E_0} \sim N(0,0.2)
+$$
+
+$$
+\tau_{E_0} \sim N^+(0.5,0.1)
+$$
+
+$$
+\mu_{RT_{int}} \sim N(-1,0.25)
+$$
+
+$$
+\tau_{RT_{int}} \sim N^+(0.6,0.2)
+$$
+
+
+$$
+\mu_{RT_{slope}} \sim N(1.5,0.5)
+$$
+
+$$
+\tau_{RT_{slope}} \sim N^+(0.6,0.2)
+$$
+
+
+$$
+\mu_\sigma \sim N(-1,0.25)
+$$
+
+$$
+\tau_\sigma \sim N^+(0.5,0.1)
+$$
+
+
+### DDM
+
+
+$$
+RT_t \sim 
+\begin{cases} 
+\text{Wiener}(\kappa_s, \delta_s, \eta_s, \nu_t), & B = 1 \\
+\text{Wiener}(\kappa_s, \delta_s, 1 - \eta_s, -\nu_t), & B = 0
+\end{cases}
+$$
+
+$$
+\nu_t = E_t - (1 - E_t) * \nu_s
+$$
+
+
+$$
+E_{t+1} = E_t + \alpha_s * (X_t - E_t) 
+$$
+
+
+$$
+\kappa_s \sim  exp(\mathcal{N}(\mu_\kappa,\tau_\kappa))
+$$
+
+$$
+\eta_s \sim  S(\mathcal{N}(\mu_\eta,\tau_\eta))
+$$
+
+
+$$
+\nu_s \sim  \mathcal{N}(\mu_\nu,\tau_\nu)
+$$
+
+
+
+$$
+\alpha_s \sim  \mathcal{N}(\mu_\alpha,\tau_\alpha)
+$$
+$$
+E_{{0_s}}\sim  S(\mathcal{N}(\mu_{E_0},\tau_{E_0}))
+$$
+
+$$
+S(x) = \frac{1}{1+exp(-x)}
+$$
+
+
+$$
+\delta_s \sim N^+(0.3,0.05)
+$$
+
+
+$$
+\mu_\alpha \sim N(-1,1)
+$$
+
+$$
+\tau_\alpha \sim N^+(0.5,0.1)
+$$
+
+$$
+\mu_{E_0} \sim N(0,0.2)
+$$
+
+$$
+\tau_{E_0} \sim N^+(0.5,0.1)
+$$
+
+
+$$
+\mu_\kappa \sim N(0.5,0.25)
+$$
+
+$$
+\tau_\kappa \sim N^+(0.4,0.1)
+$$
+
+$$
+\mu_\nu \sim N(2,0.25)
+$$
+
+$$
+\tau_\nu \sim N^+(0.5,0.1)
+$$
+
+
+$$
+\mu_\eta \sim N(0.75,0.25)
+$$
+
+$$
+\tau_\eta \sim N^+(0.4,0.1)
+$$
+
+

@@ -107,7 +107,7 @@ plot_figure1 = function(rerun = F, seed = 1997){
     
     #group level:
     expect_rw = priors_rw %>% group_by(sim_id,trial) %>% summarize(expect = mean(expect)) %>% 
-      mutate(paradigm = "Probabilistic Learning") %>% 
+      mutate(paradigm = "Learning Paradigm") %>% 
       ggplot(aes(x = trial, y = expect, group = sim_id))+
       geom_line(aes(col = "Prior"),alpha = 0.5)+
       geom_line(data = posterior_draws_rw, aes(x = trialx, y = resp, group = draw,col = "Posterior"),,alpha = 0.3)+
@@ -119,7 +119,7 @@ plot_figure1 = function(rerun = F, seed = 1997){
       xlab(" ")+
       ylab("P(Response = 1)")+
       # facet_wrap(~paradigm)+
-      ggtitle("Psychometric paradigm")+
+      ggtitle("Learning Paradigm")+
       theme+text+
       theme(strip.background = element_blank(),
             strip.text = element_text(size=font_size),
@@ -263,7 +263,7 @@ plot_figure1 = function(rerun = F, seed = 1997){
     
     #group level:
     expect_pyscho = priors %>% group_by(sim_id,x) %>% summarize(expect = mean(expect)) %>%
-      mutate(paradigm = "Psychometric paradigm") %>% 
+      mutate(paradigm = "Psychophysical Paradigm") %>% 
       ggplot(aes(x = x, y = expect, group = sim_id))+
       geom_line(aes(col = "Prior"),alpha = 0.5, show.legend = F)+
       geom_line(data = posterior_draws_psy, aes(x = x, y = resp, group = draw,col = "Posterior"),alpha = 0.3, show.legend = F)+
@@ -273,7 +273,7 @@ plot_figure1 = function(rerun = F, seed = 1997){
       scale_color_manual(name = "Model Predictions & Data",values = c("black","orange","lightblue3"))+
       coord_cartesian(ylim = c(0,1))+
       scale_x_continuous(" ", breaks = scales::pretty_breaks(n = 4))+
-      ggtitle("Psychometric paradigm")+
+      ggtitle("Psychophysical Paradigm")+
       # facet_wrap(~paradigm)+
       theme+text+
       theme(strip.background = element_blank(),
@@ -778,7 +778,7 @@ plot_figure2 = function(){
     facet_wrap(~variable, nrow = 1, labeller = label_parsed)+theme_classic()+
     # geom_text(data = datas%>% filter(variable != "μ[lapse]") %>%  mutate(variable = factor(variable, levels = variables)),
     #           aes(x = 200, y = 22, label = paste0("X^2 = ", chisq, "\np = ", pvalue)), size = font_size_small/3.5)+
-    ggtitle("Pyschophysical Paradigm")+
+    ggtitle("Psychophysical Paradigm")+
     scale_x_continuous(breaks = c(0,200,400), labels = c(0,200,400))+
     scale_y_continuous("Count",breaks = c(0,10,20), labels = c(0,10,20))+
     coord_cartesian(ylim = c(0,21))+
@@ -904,22 +904,22 @@ plot_figure3 = function(){
   
   #Define x-axis breaks and labels
   x_breaks <- c(-100, 0,400)
-  x_labels <- c("100\nFavors DDM", "0", "400\nFavors RT")
+  x_labels <- c("100\nFavors DDM", "0", "400\nFavors CBM")
   
 
   # Plot with correctly ordered sim_id
   ddm_vs_rt_psycho = dd  %>% 
-    mutate(fitted_model = ifelse(fitted_model == "ddm","DDM","RT"),
-           paradigm = "Psychometric paradigm") %>% 
+    mutate(fitted_model = ifelse(fitted_model == "ddm","DDM","CBM"),
+           paradigm = "Psychophysical Paradigm") %>% 
     rename(`Simulated model` = fitted_model) %>% 
     ggplot(aes(y = sim_id, x = elpd_diff, col = `Simulated model`)) +
     geom_pointrange(aes(xmin = elpd_diff - 2 * se_diff, xmax = elpd_diff + 2 * se_diff), alpha = 0.1, size = 0.1) +
     geom_point(size = 0.1) +
     geom_vline(aes(xintercept = 0), linetype = 2) +
-    scale_color_manual(values = c("red","blue"))+
+    scale_color_manual(values = c("blue","red"))+
     scale_x_continuous(" ",breaks = x_breaks, labels = x_labels, limits = c(-150,600)) +
     theme_classic()+
-    ggtitle("Psychometric Paradigm")+
+    ggtitle("Psychophysical Paradigm")+
     ylab("Ordered simulations") +   
     theme+text+
     theme(strip.background = element_blank(),
@@ -997,23 +997,23 @@ plot_figure3 = function(){
   
   #Define x-axis breaks and labels
   x_breaks <- c(-12, 0,12)
-  x_labels <- c("-12\nFavors no RT", "0", "12\nFavors RT")
+  x_labels <- c("-12\nFavors with only choices", "0", "12\nFavors CBM")
   
   
   data_rt_vs_nort_psycho = rtss %>% 
-    mutate(paradigm = "Psychometric paradigm") %>% 
+    mutate(paradigm = "Psychometric Paradigm") %>% 
     arrange(desc(elpd_diff)) %>% 
     mutate(sim_id = factor(sim_id, levels = unique(sim_id)))
   
   # Plot with reordered sim_id
   rt_vs_nort_psycho_df = rtss %>% 
-    mutate(paradigm = "Psychometric paradigm") %>% 
+    mutate(paradigm = "Psychometric Paradigm") %>% 
     arrange(desc(elpd_diff)) %>% drop_na() %>% 
     mutate(sim_id = factor(sim_id, levels = unique(sim_id))) %>% 
     mutate(sim_id = as.numeric(as.factor(sim_id)))
   
   rt_vs_nort_psycho = rtss %>% 
-    mutate(paradigm = "Psychometric paradigm") %>% 
+    mutate(paradigm = "Psychometric Paradigm") %>% 
     arrange(desc(elpd_diff)) %>% drop_na() %>% 
     mutate(sim_id = factor(sim_id, levels = unique(sim_id))) %>% 
     mutate(sim_id = as.numeric(as.factor(sim_id))) %>% 
@@ -1021,7 +1021,7 @@ plot_figure3 = function(){
     geom_pointrange(aes(xmin = elpd_diff - 2 * se_diff, xmax = elpd_diff + 2 * se_diff), col = "blue", alpha = 0.1, size = 0.1)+
     geom_point(col = "blue",alpha = 0.5, size = 0.1)+
     geom_vline(aes(xintercept = 0), linetype = 2)+
-    scale_x_continuous("Elpd Difference",breaks = x_breaks, labels = x_labels, limits = c(-15,19)) +
+    scale_x_continuous("ELPD Difference",breaks = x_breaks, labels = x_labels, limits = c(-15,19)) +
     coord_cartesian(ylim = c(20,nrow(rtss)-20))+
     theme_classic()+
     ylab("Ordered simulations") +
@@ -1096,7 +1096,7 @@ plot_figure3 = function(){
   
   
   # Load second dataset
-  load(here::here("Simulations","Learning","model_recovery_estimation","results","1000_rw_fitter_rt_1000_samples.RData"))
+  load(here::here("Simulations","Learning","model_recovery_estimation","results","1000_rw_fitter_rt_1000_samples1.RData"))
   results <- Filter(is.list, results)
   
   # estimation times:
@@ -1145,17 +1145,17 @@ plot_figure3 = function(){
   
   # Plot with correctly ordered sim_id
   ddm_vs_rt_rw = dd_rw  %>% 
-    mutate(fitted_model = ifelse(fitted_model == "ddm","DDM","RT"),
+    mutate(fitted_model = ifelse(fitted_model == "ddm","DDM","CBM"),
            paradigm = "Learning Paradigm") %>% 
     rename(`Simulated model` = fitted_model) %>% 
     ggplot(aes(y = sim_id, x = elpd_diff, col = `Simulated model`)) +
     geom_pointrange(aes(xmin = elpd_diff - 2 * se_diff, xmax = elpd_diff + 2 * se_diff), alpha = 0.1, size = 0.1, show.legend = F) +
     geom_point(size = 0.1, show.legend = F) +
-    scale_color_manual(values = c("red","blue"))+
+    scale_color_manual(values = c("blue","red"))+
     geom_vline(aes(xintercept = 0), linetype = 2) +
     ggtitle("Learning Paradigm")+
-    scale_x_continuous(" ",breaks = x_breaks, labels = x_labels, limits = c(-200,500)) +
-    coord_cartesian(xlim= c(-200,500))+
+    scale_x_continuous(" ",breaks = x_breaks, labels = x_labels, limits = c(-200,600)) +
+    coord_cartesian(xlim= c(-200,600))+
     theme_classic()+
     ylab(" ") + 
     theme+text+
@@ -1182,7 +1182,7 @@ plot_figure3 = function(){
   
   ## norts vs rts
   
-  load(here::here("Simulations","Learning","model_recovery_estimation","results","1000_rw_fitter_rt_1000_samples.RData"))
+  load(here::here("Simulations","Learning","model_recovery_estimation","results","1000_rw_fitter_rt_1000_samples1.RData"))
   results <- Filter(is.list, results)
   
   rts_rw = map_dfr(results,2)
@@ -1233,7 +1233,7 @@ plot_figure3 = function(){
   
   #Define x-axis breaks and labels
   x_breaks <- c(-12, 0,12)
-  x_labels <- c("-12\nFavors no RT", "0", "12\nFavors RT")
+  x_labels <- c("-12\nFavors with only choices", "0", "12\nFavors CBM")
   
   
   data_rt_vs_nort_rw = rtss_rw %>% 
@@ -1241,7 +1241,7 @@ plot_figure3 = function(){
     arrange(desc(elpd_diff)) %>% mutate(sim_id = factor(sim_id, levels = unique(sim_id)))
   
   # Plot with reordered sim_id
-  rt_vs_nort_rw = rtss_rw %>% 
+  rt_vs_nort_rw = rtss_rw  %>% 
     mutate(paradigm = "Learning Paradigm") %>% 
     arrange(desc(elpd_diff)) %>% mutate(sim_id = factor(sim_id, levels = unique(sim_id))) %>% 
     ggplot(aes(y = sim_id, x = elpd_diff)) +
@@ -1249,7 +1249,7 @@ plot_figure3 = function(){
     geom_pointrange(aes(xmin = elpd_diff - 2 * se_diff, xmax = elpd_diff + 2 * se_diff), col = "blue", alpha = 0.1, size = 0.1)+
     geom_point(col = "blue",alpha = 0.5, size = 0.1)+
     geom_vline(aes(xintercept = 0), linetype = 2)+
-    scale_x_continuous("Elpd Difference",breaks = x_breaks, labels = x_labels, limits = c(-15,15)) +
+    scale_x_continuous("ELPD Difference",breaks = x_breaks, labels = x_labels, limits = c(-13,13)) +
     coord_cartesian(ylim = c(20,1000))+
     theme_classic()+
     ylab(" ") + 
@@ -1313,11 +1313,11 @@ plot_figure3 = function(){
 
 plot_figure4 = function(){
   # plot 4
-  load(here::here("Simulations","Psychometric","model_recovery_estimation","results","1000_fitter_cop_rt_1000_samples.RData"))
+  load(here::here("Simulations","Psychometric","model_recovery_estimation","results","1000_fitter_cop_rt_1000_samples1.RData"))
   results <- Filter(is.list, results)
   
   
-  point_size = 3
+  point_size = 2
   # sds plots:
   qqq = map_dfr(results,3)%>% 
     mutate(sim_id = rep(1:1000,each = 92)) %>% 
@@ -1358,18 +1358,18 @@ plot_figure4 = function(){
     facet_wrap(~variable, scales = "free")+
     geom_abline(linetype = 2)+
     geom_ribbon(stat = 'function', fun = myfun,
-                mapping = aes(ymin = after_stat(y), ymax = Inf, fill = "Smaller SD with RT"),
+                mapping = aes(ymin = after_stat(y), ymax = Inf, fill = "Smaller SD with CBM"),
                 alpha = 0.2) +
     geom_ribbon(stat = 'function', fun = myfun,
-                mapping = aes(ymin = after_stat(y), ymax = -Inf, fill = "Smaller SD without RT"),
+                mapping = aes(ymin = after_stat(y), ymax = -Inf, fill = "Smaller SD with only choices"),
                 alpha = 0.2) +
-    scale_fill_manual(values = c("Smaller SD without RT" = "lightblue", "Smaller SD with RT" = "orange"),
+    scale_fill_manual(values = c("Smaller SD with only choices" = "lightblue", "Smaller SD with CBM" = "orange"),
                       name = " ")+
     scale_alpha_manual(values = c("mu" = 0.15, "non-mu" = 0.015),  # Adjust alpha levels
                        name = "Variable Type")+
     guides(alpha = "none")+
-    xlab("Estimated  SD with RT")+
-    ylab("Estimated  SD without RT")+
+    xlab("Estimated  SD with CBM")+
+    ylab("Estimated  SD with only choices")+
     theme_classic()
   
   posterior_sd_psycho
@@ -1377,7 +1377,7 @@ plot_figure4 = function(){
   
   ### sds plots
   
-  load(here::here("Simulations","Learning","model_recovery_estimation","results","1000_rw_fitter_rt_1000_samples.RData"))
+  load(here::here("Simulations","Learning","model_recovery_estimation","results","1000_rw_fitter_rt_1000_samples1.RData"))
   results <- Filter(is.list, results)
   
   
@@ -1415,18 +1415,18 @@ plot_figure4 = function(){
     facet_wrap(~variable, scales = "free")+
     geom_abline(linetype = 2)+
     geom_ribbon(stat = 'function', fun = myfun,
-                mapping = aes(ymin = after_stat(y), ymax = Inf, fill = "Smaller SD with RT"),
+                mapping = aes(ymin = after_stat(y), ymax = Inf, fill = "Smaller SD with CBM"),
                 alpha = 0.2) +
     geom_ribbon(stat = 'function', fun = myfun,
-                mapping = aes(ymin = after_stat(y), ymax = -Inf, fill = "Smaller SD without RT"),
+                mapping = aes(ymin = after_stat(y), ymax = -Inf, fill = "Smaller SD with only choices"),
                 alpha = 0.2) +
-    scale_fill_manual(values = c("Smaller SD without RT" = "lightblue", "Smaller SD with RT" = "orange"),
+    scale_fill_manual(values = c("Smaller SD with only choices" = "lightblue", "Smaller SD with CBM" = "orange"),
                       name = " ")+
     scale_alpha_manual(values = c("mu" = 0.15, "non-mu" = 0.015),  # Adjust alpha levels
                        name = "Variable Type")+guides(alpha = "none")+theme_classic()+
     theme(legend.position = "top")+
-    xlab("Estimated  SD with RT")+
-    ylab("Estimated  SD without RT")+
+    xlab("Estimated  SD with CBM")+
+    ylab("Estimated  SD with only choices")+
     theme_classic()
   
   
@@ -1483,15 +1483,15 @@ plot_figure4 = function(){
                 mapping = aes(ymin = after_stat(y), ymax = Inf, fill = "Smaller SD with RT"),
                 alpha = 0.2) +
     geom_ribbon(stat = 'function', fun = myfun,
-                mapping = aes(ymin = after_stat(y), ymax = -Inf, fill = "Smaller SD without RT"),
+                mapping = aes(ymin = after_stat(y), ymax = -Inf, fill = "Smaller SD with only choices"),
                 alpha = 0.2) +
-    scale_fill_manual(values = c("Smaller SD without RT" = "lightblue", "Smaller SD with RT" = "orange"),
+    scale_fill_manual(values = c("Smaller SD with only choices" = "lightblue", "Smaller SD with RT" = "orange"),
                       name = " ")+
     scale_alpha_manual(values = c("mu" = 0.15, "non-mu" = 0.015),  # Adjust alpha levels
                        name = "Variable Type")+guides(alpha = "none")+theme_classic()+
     theme(legend.position = "top")+
     xlab("Estimated  SD with RT")+
-    ylab("Estimated  SD without RT")+
+    ylab("Estimated  SD with only choices")+
     theme_classic()+
     scale_x_continuous(breaks = scales::pretty_breaks(n = 3))+
     scale_y_continuous(breaks = scales::pretty_breaks(n = 3))+ 
@@ -1529,19 +1529,19 @@ plot_figure4 = function(){
     facet_wrap(~variable, nrow = 2, scales = "free", labeller = label_parsed) +
     geom_abline(linetype = 2)+
     geom_ribbon(stat = 'function', fun = myfun,
-                mapping = aes(ymin = after_stat(y), ymax = Inf, fill = "Smaller SD with RT"),
+                mapping = aes(ymin = after_stat(y), ymax = Inf, fill = "Smaller SD with CBM"),
                 alpha = 0.2) +
     geom_ribbon(stat = 'function', fun = myfun,
-                mapping = aes(ymin = after_stat(y), ymax = -Inf, fill = "Smaller SD without RT"),
+                mapping = aes(ymin = after_stat(y), ymax = -Inf, fill = "Smaller SD with only choices"),
                 alpha = 0.2) +
-    scale_fill_manual(values = c("Smaller SD without RT" = "lightblue", "Smaller SD with RT" = "orange"),
+    scale_fill_manual(values = c("Smaller SD with only choices" = "lightblue", "Smaller SD with CBM" = "orange"),
                       name = " ")+
     scale_alpha_manual(values = c("1" = 0.15, "2" = 0.05,"6" = 0.025,"7" = 0.025),  # Adjust alpha levels
                        name = "Variable Type")+
     guides(alpha = "none")+theme_classic()+
     theme(legend.position = "top")+
-    xlab("Estimated  SD with RT")+
-    ylab("Estimated  SD without RT")+
+    xlab("Estimated  SD with CBM")+
+    ylab("Estimated  SD with only choices")+
     ggtitle("Psychometric Paradigm")+
     theme_classic()+
     facetted_pos_scales(
@@ -1592,18 +1592,18 @@ plot_figure4 = function(){
     facet_wrap(~variable, nrow = 2, scales = "free", labeller = label_parsed) +
     geom_abline(linetype = 2)+
     geom_ribbon(stat = 'function', fun = myfun,
-                mapping = aes(ymin = after_stat(y), ymax = Inf, fill = "Smaller SD with RT"),
+                mapping = aes(ymin = after_stat(y), ymax = Inf, fill = "Smaller SD with CBM"),
                 alpha = 0.2, show.legend = F) +
     geom_ribbon(stat = 'function', fun = myfun,
-                mapping = aes(ymin = after_stat(y), ymax = -Inf, fill = "Smaller SD without RT"),
+                mapping = aes(ymin = after_stat(y), ymax = -Inf, fill = "Smaller SD with only choices"),
                 alpha = 0.2, show.legend = F) +
-    scale_fill_manual(values = c("Smaller SD without RT" = "lightblue", "Smaller SD with RT" = "orange"),
+    scale_fill_manual(values = c("Smaller SD with only choices" = "lightblue", "Smaller SD with CBM" = "orange"),
                       name = " ")+
     scale_alpha_manual(values = c("4" = 0.04, "5" = 0.15, "9" = 0.015, "10" = 0.015),  # Adjust alpha levels
                        name = "Variable Type")+guides(alpha = "none")+theme_classic()+
     theme(legend.position = "top")+
-    xlab("Estimated  SD with RT")+
-    ylab("Estimated  SD without RT")+
+    xlab("Estimated  SD with CBM")+
+    ylab("Estimated  SD with only choices")+
     ggtitle("Learning Paradigm")+
     theme_classic()+
     scale_x_continuous(breaks = scales::pretty_breaks(n = 3))+
@@ -1866,15 +1866,16 @@ plot_figure5 = function(rerun = F){
     geom_pointrange(aes(y = resp, ymin = resp-2*se_resp, ymax = resp+2*se_resp, col = "Data"))+
     geom_line(data = qq_summar_sum_ddm , aes(x = trial, y = resps, col = "DDM"), linewidth = 1.1)+
     # geom_line(data = qq_summar_sum_nort, aes(x = trial, y = resps, col = "No RT"), linewidth = 1.1)+
-    geom_line(data = qq_summar_sum_rt, aes(x = trial, y = resps, col = "RT"), linewidth = 1.1)+
+    geom_line(data = qq_summar_sum_rt, aes(x = trial, y = resps, col = "CBM"), linewidth = 1.1)+
     theme_classic()+
     scale_color_manual(name = "Model Predictions & Data", 
                        values = c("DDM" = "red", 
-                                  "RT" = "blue", 
-                                  "Data" = "black"))+
+                                  "CBM" = "blue", 
+                                  "Data" = "black"),
+                       breaks = c("Data", "CBM", "DDM"))+
     scale_x_continuous(" ", breaks = scales::pretty_breaks(n = 3))+
     scale_y_continuous(" ", breaks = scales::pretty_breaks(n = 3))+ 
-    ggtitle("Learning paradigm")+
+    ggtitle("Learning Paradigm")+
     theme+text+
     theme(strip.background = element_blank(),
           strip.text = element_text(size=font_size),
@@ -1906,12 +1907,13 @@ plot_figure5 = function(rerun = F){
     geom_line(data = qq_summar_rt%>% filter(draw %in% draw_id), aes(x = trial, y = rt, group = draw), alpha = alpha, col = "#6CEEF8")+
     geom_line(data = qq_summar_ddm%>% filter(draw %in% draw_id), aes(x = trial, y = rt, group = draw), alpha = alpha, col = "orange")+
     geom_pointrange(aes(y = rt, ymin = rt-2*se_rts, ymax = rt+2*se_rts, col = "Data"), show.legend = F)+
-    geom_line(data = qq_summar_sum_rt, aes(x = trial, y = rts,col = "RT"), linewidth = 1.1, show.legend = F)+
+    geom_line(data = qq_summar_sum_rt, aes(x = trial, y = rts,col = "CBM"), linewidth = 1.1, show.legend = F)+
     geom_line(data = qq_summar_sum_ddm, aes(x = trial, y = rts, col = "DDM"), linewidth = 1.1, show.legend = F)+
     scale_color_manual(name = "Model Predictions & Data", 
                        values = c("DDM" = "red", 
-                                  "RT" = "blue", 
-                                  "Data" = "black"))+
+                                  "CBM" = "blue", 
+                                  "Data" = "black"),
+                       breaks = c("Data", "CBM", "DDM"))+
     theme_classic()+
     scale_x_continuous("Trial", breaks = scales::pretty_breaks(n = 3))+
     scale_y_continuous(" ", limits = c(0.275,0.625), breaks = c(0.3,0.4,0.5,0.6), labels = c(0.3,0.4,0.5,0.6))+
@@ -2180,17 +2182,18 @@ plot_figure5 = function(rerun = F){
     
     geom_line(data = qq_summar_psy %>% filter(draw %in% draw_id), aes(x = Difficulty_bin, y = resp, group = draw), alpha = alpha, col = "orange")+
     geom_line(data = qq_summar_sum_psy, aes(x = Difficulty_bin, y = resps, col = "DDM"), linewidth = 1.1, show.legend = F)+
-    geom_line(data = qq_summar_sum_rt_psy, aes(x = Difficulty_bin, y = resps, col = "RT"), linewidth = 1.1, show.legend = F)+
+    geom_line(data = qq_summar_sum_rt_psy, aes(x = Difficulty_bin, y = resps, col = "CBM"), linewidth = 1.1, show.legend = F)+
     # geom_line(data = qq_summar_sum_nort, aes(x = Difficulty_bin, y = resps, col = "No RT"), linewidth = 1.1)+
     geom_pointrange(aes(y = resp, ymin = resp-2*se_resp, ymax = resp+2*se_resp, col = "Data"), show.legend = F)+
     theme_classic()+
     scale_color_manual(name = "Model Predictions & Data", 
                        values = c("DDM" = "red", 
-                                  "RT" = "blue", 
-                                  "Data" = "black"))+
+                                  "CBM" = "blue", 
+                                  "Data" = "black"),
+                       breaks = c("Data", "CBM", "DDM"))+
     scale_x_continuous(" ", breaks = scales::pretty_breaks(n = 3))+
     scale_y_continuous("P(Response == 1)", breaks = scales::pretty_breaks(n = 3))+  
-    ggtitle("Psychometric paradigm")+
+    ggtitle("Psychophysical Paradigm")+
     theme+text+
     theme(strip.background = element_blank(),
           strip.text = element_text(size=font_size),
@@ -2223,13 +2226,14 @@ plot_figure5 = function(rerun = F){
     ggplot(aes(x = Difficulty_bin))+
     geom_line(data = qq_summar_rt_psy%>% filter(draw %in% draw_id), aes(x = Difficulty_bin, y = rt, group = draw), alpha = alpha, col = "#6CEEF8")+
     geom_line(data = qq_summar_psy%>% filter(draw %in% draw_id), aes(x = Difficulty_bin, y = rt, group = draw), alpha = alpha, col = "orange")+
-    geom_line(data = qq_summar_sum_rt_psy, aes(x = Difficulty_bin, y = rts,col = "RT"), show.legend = F, linewidth = 1.1)+
+    geom_line(data = qq_summar_sum_rt_psy, aes(x = Difficulty_bin, y = rts,col = "CBM"), show.legend = F, linewidth = 1.1)+
     geom_line(data = qq_summar_sum_psy, aes(x = Difficulty_bin, y = rts, col = "DDM"), show.legend = F, linewidth = 1.1)+
     geom_pointrange(aes(y = rt, ymin = rt-2*se_rts, ymax = rt+2*se_rts, col = "Data"), show.legend = F)+
     scale_color_manual(name = "Model Predictions & Data", 
                        values = c("DDM" = "red", 
-                                  "RT" = "blue", 
-                                  "Data" = "black"))+
+                                  "CBM" = "blue", 
+                                  "Data" = "black"),
+                       breaks = c("Data", "CBM", "DDM"))+
     theme_classic()+
     scale_x_continuous("Binned stimulus intensity", breaks = scales::pretty_breaks(n = 3))+
     scale_y_continuous("Response time (s)", breaks = c(0.4,0.7,1.0,1.3), labels = c("0.4","0.7","1.0","1.3"))+

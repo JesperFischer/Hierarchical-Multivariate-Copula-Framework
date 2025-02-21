@@ -23,7 +23,7 @@ save.image(here::here("Simulations","Learning","model_recovery_estimation","resu
 #### fitter rts
 
 cores = 20
-n_sim = 200
+n_sim = 600
 plan(multisession, workers = cores)
 
 qq = fitter_cop_rt(1000)
@@ -32,6 +32,6 @@ possfit_model = possibly(.f = fitter_cop_rt, otherwise = "Error")
 
 results <- future_map(rep(1000,n_sim), ~possfit_model(.x), .options = furrr_options(seed = TRUE), .progress = T)
 
-save.image(here::here("Simulations","Learning","model_recovery_estimation","results","200_rw_fitter_rt_1000_samples2.RData"))
+save.image(here::here("Simulations","Learning","model_recovery_estimation","results","600_rw_fitter_rt_1000_samples2.RData"))
 
 
