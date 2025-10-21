@@ -11,7 +11,7 @@ date: "2025-02-17"
 knitr::opts_chunk$set(echo = TRUE)
 
 packages = c("brms","tidyverse","bayesplot","pracma","here",
-             "patchwork","posterior","HDInterval","loo", "furrr", "SBC","future")
+             "patchwork","posterior","HDInterval","loo", "furrr", "SBC","future","mvtnorm")
 
 do.call(pacman::p_load, as.list(packages))
 
@@ -24,7 +24,7 @@ source(here::here("Simulations","Psychometric","SBC","scripts.R"))
 ## make data and plot
 
 ```{r}
-sim_data = generator_single(60,10)
+sim_data = generator_single(60,20)
 
 sim_data_x = sim_data[[2]]
 
@@ -33,6 +33,25 @@ data.frame(sim_data_x) %>% ggplot(aes(x = x, y = RT))+geom_point()+facet_wrap(~S
 sim_data[[1]]
 
 ```
+
+```{r}
+#check RT's
+
+# sim_data_x = sim_data[[2]]
+# 
+# data.frame(sim_data_x)  %>% 
+#   # filter(RT > 10) %>%
+#   ggplot(aes(x = RT)) + geom_histogram()
+# 
+# ids = unique(data.frame(sim_data_x)  %>% 
+#   filter(RT > 10) %>% .$S_id)
+# 
+# sim_data[[1]][13:20]$rt_int[ids]
+# sim_data[[1]][13:20]$rt_sd[ids]
+
+
+```
+
 
 ## run one the single dataset:
 ```{r}
@@ -43,19 +62,53 @@ fit = cmdstan_model$sample(data = sim_data_x,
                            iter_warmup = 250,
                            iter_sampling = 1000,
                            chains = 4,
-                           seed = 123,
+                           # seed = 123,
                            refresh = 100,
                            max_treedepth = 10,
                            parallel_chains = 4,
                            adapt_delta = 0.95)
 
-fit
+as_draws_df(fit$draws(c("gm","tau_u"))) %>% 
+  select(-contains(".")) %>% 
+  rename_with(~names(sim_data[[1]][1:12])) %>% 
+  pivot_longer(everything()) %>% 
+  mutate(draw = 1:n()) %>% 
+  ggplot(aes(x = value))+
+  geom_histogram(col = "black")+
+  geom_vline(data = data.frame(sim_data[[1]][1:12]) %>% pivot_longer(everything()), aes(xintercept = value), col = "red", linetype = 2)+
+  facet_wrap(~name, scales = "free")+
+  theme_classic()
+
+
+inner_join(
+  as_draws_df(fit$draws(names(sim_data[[1]][13:20]))) %>% 
+  select(-contains(".")) %>% 
+  pivot_longer(everything()) %>% 
+  mutate(draw = 1:n()) %>% 
+  mutate(subject = as.numeric(sub(".*\\[(\\d+)\\].*", "\\1", name)),
+         name = sub("\\[\\d+\\]", "", name)) %>% 
+  group_by(name,subject) %>% 
+  summarize(mean = mean(value),
+            q5= quantile(value,0.05),
+            q95= quantile(value,0.95))
+  ,
+  data.frame(sim_data[[1]][13:20]) %>% 
+    mutate(subject = 1:n()) %>% 
+    pivot_longer(-subject, values_to = "simulated_values")
+  ) %>% 
+  ggplot(aes(x = simulated_values, y = mean, ymin = q5, ymax = q95))+
+  geom_pointrange()+
+  facet_wrap(~name, scales = "free")+
+  geom_abline()+
+  theme_classic()
+
+
 ```
 
 
 # run for all!
 ```{r}
-n_sims <- 2000 # Number of SBC iterations to run
+n_sims <- 100 # Number of SBC iterations to run
 
 generator <- SBC_generator_function(generator_single, N = 60, S = 10)
 
@@ -69,9 +122,9 @@ backend <- SBC_backend_cmdstan_sample(
   cmdstan_model, iter_warmup = 1000, 
   iter_sampling = 2000,
   chains = 4, 
-  max_treedepth = 10,
+  max_treedepth = 12,
   parallel_chains = 4, 
-  adapt_delta = 0.95)
+  adapt_delta = 0.99)
 
 
 library(future)
@@ -86,7 +139,7 @@ results <- compute_SBC(dataset,
                        backend)
 
 
-save.image(here::here("Simulations","Psychometric","SBC","results","2000.RData"))
+# save.image(here::here("Simulations","Psychometric","SBC","results","2000.RData"))
 
 ```
 

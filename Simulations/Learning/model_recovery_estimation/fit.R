@@ -22,16 +22,16 @@ save.image(here::here("Simulations","Learning","model_recovery_estimation","resu
 
 #### fitter rts
 
-cores = 20
-n_sim = 600
+cores = 10
+n_sim = 100
 plan(multisession, workers = cores)
-
-qq = fitter_cop_rt(1000)
+source("~/Hierarchical-Multivariate-Copula-Framework/Simulations/Learning/model_recovery_estimation/sim_20.R")
+#   qq = fitter_cop_rt(500)
 
 possfit_model = possibly(.f = fitter_cop_rt, otherwise = "Error")
 
 results <- future_map(rep(1000,n_sim), ~possfit_model(.x), .options = furrr_options(seed = TRUE), .progress = T)
 
-save.image(here::here("Simulations","Learning","model_recovery_estimation","results","600_rw_fitter_rt_1000_samples2.RData"))
+save.image(here::here("Simulations","Learning","model_recovery_estimation","results","new_100_1000_samples_20subj.RData"))
 
 

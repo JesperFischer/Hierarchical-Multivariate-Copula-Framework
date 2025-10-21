@@ -138,6 +138,7 @@ dflist = list(
 rt_model <- cmdstanr::cmdstan_model(here::here("Real data","Psychometric","stanmodels","subj_ndt.stan"), force_recompile = T)
 nort_model <- cmdstanr::cmdstan_model(here::here("Real data","Psychometric","stanmodels","no_rt.stan"), force_recompile = T)
 ddm_model <- cmdstanr::cmdstan_model(here::here("Real data","Psychometric","stanmodels","hier_ddm.stan"), force_recompile = T)
+ddm_model <- cmdstanr::cmdstan_model(here::here("Real data","Psychometric","stanmodels","hierddm_x.stan"), force_recompile = T)
 
 
 
@@ -176,7 +177,7 @@ psy_ddm = ddm_model$sample(data = dflist,
                           max_treedepth = 10,
                           parallel_chains = 4,
                           adapt_delta = 0.95)
-psy_ddm$save_object(here::here("Real data","Psychometric","psy_ddm1.rds"))
+psy_ddm$save_object(here::here("Real data","Psychometric","psy_ddm1_x.rds"))
 
 
 rt_loo_bin = psy_rt$loo("log_lik_bin")
@@ -193,362 +194,15 @@ full_loo %>% filter(elpd_diff != 0) %>% mutate(ratio = elpd_diff/se_diff)
 
 bin_loo = loo::loo_compare(list(rt_loo_bin,nort_loo))
 
-## plotting:
-
-draw_id = sample(1:4000,100)
-
-# subject level 
-big_df_ddm = data.frame()
-subject_means = data.frame()
-
-for(s in unique(df$participant)){
-  print(s)
-  xs = seq(-0.3,0.3,by = 0.01)
-  
-  minRT = min(df %>% filter(participant == s) %>% .$RT_dec)
-  
-  parameters = paste0(c("threshold","slope","lapse","alpha","beta","delta","rt_ndt"), "[",s,"]")
-  
-  dfq = as_draws_df(psy_ddm$draws(parameters))%>% select(-contains(".")) %>% mutate(draw = 1:n()) %>% 
-    filter(draw %in% draw_id) %>% 
-    rename_with(~c("threshold","slope","lapse","alpha","beta","delta","rt_ndt","draw")) %>% 
-    group_by(draw) %>% 
-    summarize(list(generate_trial_ddm(x = xs, threshold = threshold,slope = slope, lapse = lapse,participant = s,
-                                      alpha = alpha,beta = beta,delta = delta,rt_ndt = rt_ndt))) %>% unnest() %>% 
-    rename(RT_dec = q) %>% 
-    mutate(resp = ifelse(resp == "upper",1,0))
-
-  
-  means = as_draws_df(psy_ddm$summary(parameters))%>% select(-contains(".")) %>% select(median,variable) %>% 
-    pivot_wider(names_from = variable,values_from = median) %>% 
-    rename_with(~c("threshold","slope","lapse","alpha","beta","delta","rt_ndt")) %>% 
-    summarize(list(generate_trial_ddm(x = xs, threshold = threshold,slope = slope, lapse = lapse,participant = s, 
-                                      alpha = alpha,beta = beta,delta = delta,rt_ndt = rt_ndt))) %>% unnest() %>% 
-    rename(RT_dec = q) %>% 
-    mutate(resp = ifelse(resp == "upper",1,0))
-  
-  subject_means = rbind(subject_means,means)
-  
-  big_df_ddm = rbind(big_df_ddm,dfq)
-  
-}
-
-subject_means %>% group_by(participant,x) %>% summarize(resp = mean(resp), RT = median(RT_dec)) %>% 
-  pivot_longer(cols = c("resp","RT")) %>% ggplot(aes(x = x, y = value))+
-  facet_wrap(participant~name, scales = "free")+geom_point()
-
-big_df_ddm = big_df_ddm %>% mutate(resp = ifelse(resp == 0, 1, 0))
-
-subject_means = subject_means %>% mutate(name = "RT_dec")
-
-
-df %>%   ungroup() %>%  mutate(rts = (RT_dec),bin_resp = Response) %>% drop_na() %>%
-  mutate(Difficulty_bin = cut((Difficulty), breaks = 5, labels = FALSE),
-         Difficulty = abs(Difficulty),
-         Difficulty_bin = (Difficulty_bin - min(Difficulty_bin)) / (max(Difficulty_bin) - min(Difficulty_bin)) * (0.3 - (-0.3)) + (-0.3)
-  ) %>%
-  group_by(Difficulty_bin,participant ) %>% 
-  summarize(resp = mean(bin_resp), rt = median(rts), se_resp =  (mean(bin_resp) * (1- mean(bin_resp))) / sqrt(n()), se_rts = sd(rts)/sqrt(n())) %>%
-  ggplot()+
-  geom_pointrange(aes(x = Difficulty_bin, y = resp, ymin = resp-se_resp, ymax = resp+se_resp))+
-  # geom_line(data = subject_means_rt, aes(x = x, y = expectation))+
-  geom_line(data = big_df_ddm %>% filter(draw %in% 1:100), aes(x = x, y = expectation, group = draw), alpha = 0.05)+
-  facet_wrap(~participant)+
-  theme_minimal()
-
-df %>%   ungroup() %>%  mutate(rts = (RT_dec),bin_resp = Response) %>% drop_na() %>%
-  mutate(Difficulty_bin = cut((Difficulty), breaks = 5, labels = FALSE),
-         Difficulty = abs(Difficulty),
-         Difficulty_bin = (Difficulty_bin - min(Difficulty_bin)) / (max(Difficulty_bin) - min(Difficulty_bin)) * (0.3 - (-0.3)) + (-0.3)
-  ) %>%
-  group_by(Difficulty_bin,participant ) %>% 
-  summarize(resp = mean(bin_resp), rt = median(rts), se_resp =  (mean(bin_resp) * (1- mean(bin_resp))) / sqrt(n()), se_rts = sd(rts)/sqrt(n())) %>%
-  ggplot()+
-  geom_pointrange(aes(x = Difficulty_bin, y = rt, ymin = rt-2*se_rts, ymax = rt+2*se_rts))+
-  # geom_line(data = subject_means_rt, aes(x = x, y = rts))+
-  geom_line(data = big_df_ddm %>% filter(draw %in% 1:100), aes(x = x, y = RT_dec, group = draw), alpha = 0.05)+
-  scale_y_continuous(limits = c(0,5))+
-  facet_wrap(~participant)+
-  theme_minimal()
-
-
-
-
-qq_summar = big_df_ddm %>%  ungroup() %>%  mutate(rts = (RT_dec),bin_resp = resp, Difficulty = x) %>% drop_na() %>%
-  mutate(Difficulty_bin = cut((Difficulty), breaks = 5, labels = FALSE),
-         Difficulty = abs(Difficulty),
-         Difficulty_bin = (Difficulty_bin - min(Difficulty_bin)) / (max(Difficulty_bin) - min(Difficulty_bin)) * (0.3 - (-0.3)) + (-0.3)
-  ) %>%
-  group_by(Difficulty_bin,draw) %>% 
-  summarize(resp = mean(bin_resp), rt = median(rts), se_resp =  (mean(bin_resp) * (1- mean(bin_resp))) / sqrt(n()), se_rts = sd(rts)/sqrt(n()))
-
-
-
-qq_summar_sum = qq_summar %>%   group_by(Difficulty_bin) %>% 
-  summarize(resps = mean(resp), rts = median(rt), se_resp =  (mean(resp) * (1- mean(resp))) / sqrt(n()), se_rts = sd(rts)/sqrt(n()))
-
-
-df %>%   ungroup() %>%  mutate(rts = (RT_dec),bin_resp = Response) %>% drop_na() %>%
-  mutate(Difficulty_bin = cut((Difficulty), breaks = 5, labels = FALSE),
-         Difficulty = abs(Difficulty),
-         Difficulty_bin = (Difficulty_bin - min(Difficulty_bin)) / (max(Difficulty_bin) - min(Difficulty_bin)) * (0.3 - (-0.3)) + (-0.3)
-  ) %>%
-  group_by(Difficulty_bin) %>% 
-  summarize(resp = mean(bin_resp), rt = median(rts), se_resp =  (mean(bin_resp) * (1- mean(bin_resp))) / sqrt(n()), se_rts = sd(rts)/sqrt(n())) %>%
-  ggplot(aes(x = Difficulty_bin))+
-  geom_line(data = qq_summar, aes(x = Difficulty_bin, y = rt, group = draw), alpha = 0.01, col = "orange")+
-  geom_line(data = qq_summar_sum, aes(x = Difficulty_bin, y = rts), col = "red")+
-  geom_pointrange(aes(y = rt, ymin = rt-2*se_rts, ymax = rt+2*se_rts))+
-  theme_classic()
-
-
-df %>%   ungroup() %>%  mutate(rts = (RT_dec),bin_resp = Response) %>% drop_na() %>%
-  mutate(Difficulty_bin = cut((Difficulty), breaks = 5, labels = FALSE),
-         Difficulty = abs(Difficulty),
-         Difficulty_bin = (Difficulty_bin - min(Difficulty_bin)) / (max(Difficulty_bin) - min(Difficulty_bin)) * (0.3 - (-0.3)) + (-0.3)
-  ) %>%
-  group_by(Difficulty_bin) %>% 
-  summarize(resp = mean(bin_resp), rt = median(rts), se_resp =  (mean(bin_resp) * (1- mean(bin_resp))) / sqrt(n()), se_rts = sd(rts)/sqrt(n())) %>%
-  ggplot(aes(x = Difficulty_bin))+
-  geom_line(data = qq_summar, aes(x = Difficulty_bin, y = resp, group = draw), alpha = 0.01, col = "orange")+
-  geom_line(data = qq_summar_sum, aes(x = Difficulty_bin, y = resps), col = "red")+
-  geom_pointrange(aes(y = resp, ymin = resp-se_resp, ymax = resp+se_resp))+
-  theme_classic()
-
-
-
-# rts
-# subject level 
-big_df_rt = data.frame()
-subject_means_rt = data.frame()
-for(s in unique(df$participant)){
-  print(s)
-  xs = seq(-0.3,0.3,by = 0.01)
-  
-  minRT = min(df %>% filter(participant == s) %>% .$RT_dec)
-  
-  parameters = paste0(c("threshold","slope","lapse","rt_int","rt_beta","rt_ndt","rt_sd","rho"), "[",s,"]")
-  
-  dfq = as_draws_df(psy_rt$draws(parameters))%>% select(-contains(".")) %>% mutate(draw = 1:n()) %>% 
-    filter(draw %in% draw_id) %>% 
-    rename_with(~c("threshold","slope","lapse","rt_int","rt_beta","rt_ndt","rt_sd","rho","draw")) %>% 
-    group_by(draw) %>% 
-    summarize(list(generate_trial_shannon_entropy_rt(x = xs, threshold = threshold,slope = slope, lapse = lapse,participant = s,
-                                                     rt_int = rt_int,rt_beta = rt_beta,rt_ndt = rt_ndt,rt_sd = rt_sd,rho = rho))) %>% unnest()
-  
-  means = as_draws_df(psy_rt$summary(parameters))%>% select(-contains(".")) %>% select(median,variable) %>% 
-    pivot_wider(names_from = variable,values_from = median) %>% 
-    rename_with(~c("threshold","slope","lapse","rt_int","rt_beta","rt_ndt","rt_sd","rho")) %>% 
-    summarize(list(generate_trial_shannon_entropy_rt(x = xs, threshold = threshold,slope = slope, lapse = lapse,participant = s,
-                                                     rt_int = rt_int,rt_beta = rt_beta,rt_ndt = rt_ndt,rt_sd = rt_sd,rho = rho))) %>% unnest()
-  
-  subject_means_rt = rbind(subject_means_rt,means)
-  
-  big_df_rt = rbind(big_df_rt,dfq)
-  
-}
-
-subject_means_rt = subject_means_rt %>% mutate(name = "RT_dec")
-
-df %>%   ungroup() %>%  mutate(rts = (RT_dec),bin_resp = Response) %>% drop_na() %>%
-  mutate(Difficulty_bin = cut((Difficulty), breaks = 5, labels = FALSE),
-         Difficulty = abs(Difficulty),
-         Difficulty_bin = (Difficulty_bin - min(Difficulty_bin)) / (max(Difficulty_bin) - min(Difficulty_bin)) * (0.3 - (-0.3)) + (-0.3)
-  ) %>%
-  group_by(Difficulty_bin,participant ) %>% 
-  summarize(resp = mean(bin_resp), rt = median(rts), se_resp =  (mean(bin_resp) * (1- mean(bin_resp))) / sqrt(n()), se_rts = sd(rts)/sqrt(n())) %>%
-  ggplot()+
-  geom_pointrange(aes(x = Difficulty_bin, y = resp, ymin = resp-se_resp, ymax = resp+se_resp))+
-  # geom_line(data = subject_means_rt, aes(x = x, y = expectation))+
-  geom_line(data = big_df_rt %>% filter(draw %in% 1:100), aes(x = x, y = expectation, group = draw), alpha = 0.05)+
-  facet_wrap(~participant)+
-  theme_minimal()
-
-df %>%   ungroup() %>%  mutate(rts = (RT_dec),bin_resp = Response) %>% drop_na() %>%
-  mutate(Difficulty_bin = cut((Difficulty), breaks = 5, labels = FALSE),
-         Difficulty = abs(Difficulty),
-         Difficulty_bin = (Difficulty_bin - min(Difficulty_bin)) / (max(Difficulty_bin) - min(Difficulty_bin)) * (0.3 - (-0.3)) + (-0.3)
-  ) %>%
-  group_by(Difficulty_bin,participant ) %>% 
-  summarize(resp = mean(bin_resp), rt = median(rts), se_resp =  (mean(bin_resp) * (1- mean(bin_resp))) / sqrt(n()), se_rts = sd(rts)/sqrt(n())) %>%
-  ggplot()+
-  geom_pointrange(aes(x = Difficulty_bin, y = rt, ymin = rt-2*se_rts, ymax = rt+2*se_rts))+
-  # geom_line(data = subject_means_rt, aes(x = x, y = rts))+
-  geom_line(data = big_df_rt %>% filter(draw %in% 1:100), aes(x = x, y = rts, group = draw), alpha = 0.05)+
-  scale_y_continuous(limits = c(0,5))+
-  facet_wrap(~participant)+
-  theme_minimal()
-
-
-
-
-
-qq_summar_rt = big_df_rt %>% rename(Response = expectation,RT_dec = rts) %>%   
-  ungroup() %>%  
-  mutate(rts = (RT_dec),bin_resp = resp, Difficulty = x) %>% drop_na() %>%
-  mutate(Difficulty_bin = cut((Difficulty), breaks = 5, labels = FALSE),
-         Difficulty = abs(Difficulty),
-         Difficulty_bin = (Difficulty_bin - min(Difficulty_bin)) / (max(Difficulty_bin) - min(Difficulty_bin)) * (0.3 - (-0.3)) + (-0.3)
-  ) %>%
-  group_by(Difficulty_bin,draw) %>% 
-  summarize(resp = mean(bin_resp), rt = median(rts))
-
-
-
-qq_summar_sum_rt = qq_summar_rt %>%   group_by(Difficulty_bin) %>% 
-  summarize(resps = mean(resp), rts = median(rt))
-
-
-df %>%   ungroup() %>%  mutate(rts = (RT_dec),bin_resp = Response) %>% drop_na() %>%
-  mutate(Difficulty_bin = cut((Difficulty), breaks = 5, labels = FALSE),
-         Difficulty = abs(Difficulty),
-         Difficulty_bin = (Difficulty_bin - min(Difficulty_bin)) / (max(Difficulty_bin) - min(Difficulty_bin)) * (0.3 - (-0.3)) + (-0.3)
-  ) %>%
-  group_by(Difficulty_bin) %>% 
-  summarize(resp = mean(bin_resp), rt = median(rts), se_resp =  (mean(bin_resp) * (1- mean(bin_resp))) / sqrt(n()), se_rts = sd(rts)/sqrt(n())) %>%
-  ggplot(aes(x = Difficulty_bin))+
-  geom_line(data = qq_summar_rt, aes(x = Difficulty_bin, y = rt, group = draw), alpha = 0.01, col = "#6CEEF8")+
-  geom_line(data = qq_summar_sum_rt, aes(x = Difficulty_bin, y = rts), col = "blue")+
-  geom_pointrange(aes(y = rt, ymin = rt-se_rts, ymax = rt+se_rts))+
-  theme_classic()
-
-
-df %>%   ungroup() %>%  mutate(rts = (RT_dec),bin_resp = Response) %>% drop_na() %>%
-  mutate(Difficulty_bin = cut((Difficulty), breaks = 5, labels = FALSE),
-         Difficulty = abs(Difficulty),
-         Difficulty_bin = (Difficulty_bin - min(Difficulty_bin)) / (max(Difficulty_bin) - min(Difficulty_bin)) * (0.3 - (-0.3)) + (-0.3)
-  ) %>%
-  group_by(Difficulty_bin) %>% 
-  summarize(resp = mean(bin_resp), rt = median(rts), se_resp =  (mean(bin_resp) * (1- mean(bin_resp))) / sqrt(n()), se_rts = sd(rts)/sqrt(n())) %>%
-  ggplot(aes(x = Difficulty_bin))+
-  geom_line(data = qq_summar_rt, aes(x = Difficulty_bin, y = resp, group = draw), alpha = 0.01, col = "#6CEEF8")+
-  geom_line(data = qq_summar_sum_rt, aes(x = Difficulty_bin, y = resps), col = "blue")+
-  geom_pointrange(aes(y = resp, ymin = resp-se_resp, ymax = resp+se_resp))+
-  theme_classic()
-
-
-
-# no rts:
-
-big_df_nort = data.frame()
-subject_means_nort = data.frame()
-for(s in unique(df$participant)){
-  print(s)
-  xs = seq(-0.3,0.3,by = 0.01)
-  
-  
-  parameters = paste0(c("threshold","slope","lapse"), "[",s,"]")
-  
-  dfq = as_draws_df(psy_nort$draws(parameters))%>% select(-contains(".")) %>% mutate(draw = 1:n()) %>% 
-    filter(draw %in% draw_id) %>% 
-    rename_with(~c("threshold","slope","lapse","draw")) %>% 
-    group_by(draw) %>% 
-    summarize(list(generate_psycho(x = xs, threshold = threshold,slope = slope, lapse = lapse,participant = s))) %>% unnest()
-  
-  means = as_draws_df(psy_nort$summary(parameters))%>% select(-contains(".")) %>% select(median,variable) %>% 
-    pivot_wider(names_from = variable,values_from = median) %>% 
-    rename_with(~c("threshold","slope","lapse")) %>% 
-    summarize(list(generate_psycho(x = xs, threshold = threshold,slope = slope, lapse = lapse,participant = s))) %>% unnest()
-  
-  big_df_nort = rbind(big_df_nort,dfq)
-  
-  subject_means_nort = rbind(subject_means_nort,means)
-  
-}
-
-qq_summar_nort = big_df_nort %>% 
-  ungroup() %>%  mutate(bin_resp = resp, Difficulty = x) %>% drop_na() %>%
-  mutate(Difficulty_bin = cut((Difficulty), breaks = 5, labels = FALSE),
-         Difficulty = abs(Difficulty),
-         Difficulty_bin = (Difficulty_bin - min(Difficulty_bin)) / (max(Difficulty_bin) - min(Difficulty_bin)) * (0.3 - (-0.3)) + (-0.3)
-  ) %>%
-  group_by(Difficulty_bin,draw) %>% 
-  summarize(resp = mean(bin_resp))
-
-
-qq_summar_sum_nort = qq_summar_nort %>%   
-  group_by(Difficulty_bin) %>% 
-  summarize(resps = mean(resp))
-
-
-
-df %>%   ungroup() %>%  mutate(rts = (RT_dec),bin_resp = Response) %>% drop_na() %>%
-  mutate(Difficulty_bin = cut((Difficulty), breaks = 5, labels = FALSE),
-         Difficulty = abs(Difficulty),
-         Difficulty_bin = (Difficulty_bin - min(Difficulty_bin)) / (max(Difficulty_bin) - min(Difficulty_bin)) * (0.3 - (-0.3)) + (-0.3)
-  ) %>%
-  group_by(Difficulty_bin) %>% 
-  summarize(resp = mean(bin_resp), rt = median(rts), se_resp =  (mean(bin_resp) * (1- mean(bin_resp))) / sqrt(n()), se_rts = sd(rts)/sqrt(n())) %>%
-  ggplot(aes(x = Difficulty_bin))+
-  geom_line(data = qq_summar_nort, aes(x = Difficulty_bin, y = resp, group = draw), alpha = 0.01, col = "#00C853")+
-  geom_line(data = qq_summar_sum_nort, aes(x = Difficulty_bin, y = resps), col = "green")+
-  geom_pointrange(aes(y = resp, ymin = resp-se_resp, ymax = resp+se_resp))+
-  theme_classic()
-
-
-
-## Both
-
-## psychometric fits
-alpha = 0.1
-
-psycho_psycho = df %>%   ungroup() %>%  mutate(rts = (RT_dec),bin_resp = Response) %>% drop_na() %>%
-  mutate(Difficulty_bin = cut((Difficulty), breaks = 10, labels = FALSE),
-         Difficulty = abs(Difficulty),
-         Difficulty_bin = (Difficulty_bin - min(Difficulty_bin)) / (max(Difficulty_bin) - min(Difficulty_bin)) * (0.3 - (-0.3)) + (-0.3)
-  ) %>%
-  group_by(Difficulty_bin) %>% 
-  summarize(resp = mean(bin_resp), rt = median(rts), se_resp =  (mean(bin_resp) * (1- mean(bin_resp))) / sqrt(n()), se_rts = sd(rts)/sqrt(n())) %>%
-  ggplot(aes(x = Difficulty_bin))+
-  geom_line(data = qq_summar_rt %>% filter(draw %in% draw_id), aes(x = Difficulty_bin, y = resp, group = draw), alpha = alpha, col = "#6CEEF8")+
-
-  # geom_line(data = qq_summar_nort, aes(x = Difficulty_bin, y = resp, group = draw), alpha = 0.01, col = "black")+
-
-  geom_line(data = qq_summar%>% filter(draw %in% draw_id), aes(x = Difficulty_bin, y = resp, group = draw), alpha = alpha, col = "orange")+
-  geom_line(data = qq_summar_sum, aes(x = Difficulty_bin, y = resps, col = "DDM"), linewidth = 1.1)+
-  geom_line(data = qq_summar_sum_rt, aes(x = Difficulty_bin, y = resps, col = "RT"), linewidth = 1.1)+
-  geom_line(data = qq_summar_sum_nort, aes(x = Difficulty_bin, y = resps, col = "No RT"), linewidth = 1.1)+
-  geom_pointrange(aes(y = resp, ymin = resp-2*se_resp, ymax = resp+2*se_resp))+
-  theme_minimal()+
-  scale_color_manual(name = "Fitted model",values = c("red","black","blue"))+
-  scale_x_continuous("Binned stimulus intensity", breaks = scales::pretty_breaks(n = 3))+
-  scale_y_continuous("P(Response == 1)", breaks = scales::pretty_breaks(n = 3))+  
-  ggtitle("Psychophysics")+
-  theme(plot.title = element_text(hjust = 0.5))
-
-
-psycho_psycho
-## rts
-
-rts_psycho = df %>%   ungroup() %>%  mutate(rts = (RT_dec),bin_resp = Response) %>% drop_na() %>%
-  mutate(Difficulty_bin = cut((Difficulty), breaks = 10, labels = FALSE),
-         Difficulty = abs(Difficulty),
-         Difficulty_bin = (Difficulty_bin - min(Difficulty_bin)) / (max(Difficulty_bin) - min(Difficulty_bin)) * (0.3 - (-0.3)) + (-0.3)
-  ) %>%
-  group_by(Difficulty_bin) %>% 
-  summarize(resp = mean(bin_resp), rt = median(rts), se_resp =  (mean(bin_resp) * (1- mean(bin_resp))) / sqrt(n()), se_rts = sd(rts)/sqrt(n())) %>%
-  ggplot(aes(x = Difficulty_bin))+
-  geom_line(data = qq_summar_rt%>% filter(draw %in% draw_id), aes(x = Difficulty_bin, y = rt, group = draw), alpha = alpha, col = "#6CEEF8")+
-  geom_line(data = qq_summar%>% filter(draw %in% draw_id), aes(x = Difficulty_bin, y = rt, group = draw), alpha = alpha, col = "orange")+
-  geom_line(data = qq_summar_sum_rt, aes(x = Difficulty_bin, y = rts), col = "blue", linewidth = 1.1)+
-  geom_line(data = qq_summar_sum, aes(x = Difficulty_bin, y = rts), col = "red", linewidth = 1.1)+
-  geom_pointrange(aes(y = rt, ymin = rt-2*se_rts, ymax = rt+2*se_rts))+
-  scale_color_manual(name = "Fitted model",values = c("red","black","blue"))+
-  theme_minimal()+
-  scale_x_continuous("Binned stimulus intensity", breaks = scales::pretty_breaks(n = 3))+
-  scale_y_continuous("Response time (S)", breaks = scales::pretty_breaks(n = 3))
-
-
-psycho_psycho/rts_psycho+
-  plot_layout(axis_titles = "collect")
-
 
 # trace and prior posterior updates: (DDM)
 
 parameters = paste0("mu_",c("threshold","slope","lapse","alpha","beta","delta"))
 
 traces_psycho_ddm = as_draws_df(psy_ddm$draws(parameters)) %>% pivot_longer(all_of(parameters), names_to = "variables") %>% 
-  mutate(.chain = as.factor(.chain)) %>% 
+  mutate(.chain = as.factor(.chain),
+         variables = factor(variables, levels = parameters)  # <-- set factor levels here
+         ) %>% 
   ggplot(aes(x = .iteration, y = value, col = .chain)) + facet_wrap(~variables, nrow = 1, scales = "free")+geom_line()+
   theme_minimal()+
   scale_color_manual(values = c(bayesplot::color_scheme_get("red")[[1]],
@@ -573,8 +227,13 @@ priors_psycho_ddm = data.frame(variables = parameters) %>% mutate(value = list(r
   mutate(distribution = "prior")
 
    
-pp_update_psycho_ddm = rbind(priors_psycho_ddm,posteriors_psycho_ddm %>% select(variables,value,distribution)) %>% ggplot(aes(x = value, fill = distribution))+
-  geom_histogram(col = "black", alpha = 0.5)+
+pp_update_psycho_ddm = rbind(priors_psycho_ddm,posteriors_psycho_ddm %>% 
+                               select(variables,value,distribution)) %>% 
+  mutate(
+    variables = factor(variables, levels = parameters)  # <-- set factor levels here
+  ) %>% 
+  ggplot(aes(x = value, fill = distribution))+
+  geom_histogram(col = "black", alpha = 0.5, position = "identity")+
   facet_wrap(~variables, nrow = 1, scales = "free")+
   theme_minimal()+
   scale_x_continuous("Value", breaks = scales::pretty_breaks(n = 3))+
@@ -587,13 +246,19 @@ convergence_psycho_ddm = traces_psycho_ddm / pp_update_psycho_ddm
 convergence_psycho_ddm
 
 
+ggsave(here::here("Figures","supplementary1_convergence_psycho_ddm.tiff"),convergence_psycho_ddm,width = 7,height = 5,dpi = 300, units = "in")
+
+
+
 # response
 
 
 parameters = paste0("mu_",c("threshold","slope","lapse","rt_int","rt_beta","rt_sd"))
 
 traces_psycho_rt = as_draws_df(psy_rt$draws(parameters)) %>% pivot_longer(all_of(parameters), names_to = "variables") %>% 
-  mutate(.chain = as.factor(.chain)) %>% 
+  mutate(.chain = as.factor(.chain),
+         variables = factor(variables, levels = parameters)  # <-- set factor levels here
+         ) %>% 
   ggplot(aes(x = .iteration, y = value, col = .chain)) + facet_wrap(~variables, nrow = 1, scales = "free")+geom_line()+
   theme_minimal()+
   scale_color_manual(values = c(bayesplot::color_scheme_get("red")[[1]],
@@ -618,8 +283,12 @@ priors_psycho_rt = data.frame(variables = parameters) %>% mutate(value = list(rn
   mutate(distribution = "prior")
 
 
-pp_update_psycho_rt = rbind(priors_psycho_rt,posteriors_psycho_rt %>% select(variables,value,distribution)) %>% ggplot(aes(x = value, fill = distribution))+
-  geom_histogram(col = "black", alpha = 0.5)+
+pp_update_psycho_rt = rbind(priors_psycho_rt,posteriors_psycho_rt %>% select(variables,value,distribution)) %>% 
+  mutate(
+    variables = factor(variables, levels = parameters)  # <-- set factor levels here
+  ) %>% 
+  ggplot(aes(x = value, fill = distribution))+
+  geom_histogram(col = "black", alpha = 0.5, position = "identity")+
   facet_wrap(~variables, nrow = 1, scales = "free")+
   theme_minimal()+
   scale_x_continuous("Value", breaks = scales::pretty_breaks(n = 3))+
@@ -630,4 +299,192 @@ pp_update_psycho_rt = rbind(priors_psycho_rt,posteriors_psycho_rt %>% select(var
 
 convergence_psycho_rt = traces_psycho_rt / pp_update_psycho_rt
 convergence_psycho_rt
-convergence_psycho_ddm
+
+ggsave(here::here("Figures","supplementary2_convergence_psycho_rt.tiff"),convergence_psycho_rt,width = 7,height = 5,dpi = 300, units = "in")
+
+
+posteriors_psy_nort = as_draws_df(psy_nort$draws(parameters[1:3])) %>% 
+  pivot_longer(all_of(parameters[1:3]), names_to = "variables") %>% 
+  mutate(distribution = "posterior")
+
+
+
+
+
+psychometric_parameters = rbind(
+  rbind(priors_psycho_rt,posteriors_psycho_rt %>% select(variables,value,distribution)) %>% 
+    mutate(
+      variables = factor(variables, levels = parameters)  # <-- set factor levels here
+    ) %>% filter(distribution == "posterior" & variables %in% c("mu_threshold","mu_slope","mu_lapse")) %>% mutate(model = "CBM")
+  ,
+  pp_update_rw_ddm = rbind(priors_psycho_ddm,posteriors_psycho_ddm %>% select(variables,value,distribution)) %>% 
+    mutate(
+      variables = factor(variables, levels = parameters)  # <-- set factor levels here
+    )%>% filter(distribution == "posterior"& variables %in% c("mu_threshold","mu_slope","mu_lapse")) %>% mutate(model = "DDM")
+  ,
+  posteriors_psy_nort%>% select(variables,value,distribution) %>% 
+  mutate(model = "no_RT")) %>%
+  filter(grepl("mu_",variables)) %>% 
+  mutate(variables = str_replace(variables, "^mu_", "μ["),
+         variables = paste0(variables, "]"),
+         variables = str_replace(variables, "rt", "RT")) %>% 
+  ggplot(aes(x = value, fill = model))+
+  geom_histogram(col = "black", alpha = 0.35, position = "identity")+
+  facet_wrap(~variables, nrow = 1, scales = "free")+
+  theme_minimal()+
+  theme(legend.position = "top")+
+  scale_fill_manual(values = c("darkgreen","red","darkblue"))+
+  scale_x_continuous("Parameter value", breaks = scales::pretty_breaks(n = 3))+
+  scale_y_continuous("Frequency", breaks = scales::pretty_breaks(n = 3))+
+  theme(legend.position = "top")+
+  theme_classic()+
+  theme+text+
+  theme(strip.background = element_blank(),
+        legend.position = "top",
+        legend.box = "horizontal",
+        legend.direction="horizontal",
+        legend.justification='center',
+        legend.key.height = unit(0.5, 'cm'),
+        legend.key.width = unit(0.5, 'cm'),
+        plot.title = element_text(hjust = 0.5, size = font_size), #change legend key height
+        legend.text = element_text(size=font_size_small),
+        axis.text=element_text(size=font_size_small),
+        axis.title=element_text(size=font_size),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.line=element_line(size=axis_width),
+        axis.ticks=element_line(size=axis_width),
+        axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=0.5))
+
+
+
+
+
+
+
+
+parameters = paste0(c("threshold","slope","lapse","rt_int","rt_beta","rt_sd","rt_ndt","rho"))
+
+df1 = as_draws_df(psy_rt$draws(parameters)) %>% 
+  select(-contains(".")) %>% 
+  mutate(draw = 1:n()) %>% 
+  pivot_longer(-draw, names_to = "variables") %>% 
+  mutate(
+    id = as.integer(str_extract(variables, "(?<=\\[)\\d+(?=\\])")),  # extract number inside brackets
+    variables = str_remove(variables, "\\[\\d+\\]")                  # remove [number]
+  ) %>% pivot_wider(values_from = "value", names_from = "variables")
+
+
+parameters = paste0(c("threshold","slope","lapse","alpha","beta","delta","rt_ndt"))
+
+df2 = as_draws_df(psy_ddm$draws(parameters)) %>% 
+  select(-contains(".")) %>% 
+  mutate(draw = 1:n()) %>% 
+  pivot_longer(-draw, names_to = "variables") %>% 
+  mutate(
+    id = as.integer(str_extract(variables, "(?<=\\[)\\d+(?=\\])")),  # extract number inside brackets
+    variables = str_remove(variables, "\\[\\d+\\]")                  # remove [number]
+  ) %>% pivot_wider(values_from = "value", names_from = "variables")
+
+joined <- left_join(df1, df2, by = c("draw", "id"), suffix = c("_m1", "_m2")) %>% filter(draw %in% 1:1000)
+
+params_m1 <- c("threshold_m1", "slope_m1", "lapse_m1", "alpha_m1", "beta_m1", "delta_m1", "rt_ndt_m1")
+params_m2 <- c("threshold_m2", "slope_m2", "lapse_m2", "rt_int_m2", "rt_beta_m2", "rt_sd_m2", "rt_ndt_m2", "rho_m2")
+
+
+colnames(joined) = c("draw" ,        "id"  ,         "threshold_m1", "slope_m1"   ,  "lapse_m1" ,    "rt_int_m1",
+                     "rt_beta_m1",      "rt_sd_m1",        "rt_ndt_m1","rho_m1",
+                     "threshold_m2", "slope_m2"   ,  "lapse_m2",     "alpha_m2" ,       "beta_m2" ,        "delta_m2" ,       "rt_ndt_m2")
+
+
+joined %>% group_by(draw) %>% 
+  summarize(cor = cor.test(threshold_m1,threshold_m2)$estimate[[1]]) %>% 
+  ggplot(aes(x = cor))+geom_histogram(col = "black")
+
+
+
+params_m1 <- c("threshold_m1", "slope_m1", "lapse_m1", "rt_int_m1", "rt_beta_m1", "rt_sd_m1", "rt_ndt_m1","rho_m1")
+params_m2 <- c("threshold_m2", "slope_m2", "lapse_m2", "alpha_m2", "beta_m2", "delta_m2", "rt_ndt_m2")
+
+# Generate all param pairs
+param_grid <- expand_grid(param1 = params_m1, param2 = params_m2)
+
+# Function to get correlation per draw for one pair
+get_cor_by_draw <- function(p1, p2) {
+  joined %>%
+    group_by(draw) %>%
+    summarize(cor = cor(.data[[p1]], .data[[p2]]), .groups = "drop") %>%
+    mutate(var1 = p1, var2 = p2)
+}
+
+# Map over all pairs
+all_correlations <- purrr::map2_dfr(param_grid$param1, param_grid$param2, get_cor_by_draw)
+
+
+library(HDInterval)
+
+summary_cor <- all_correlations %>%
+  group_by(var1, var2) %>%
+  summarize(
+    median = median(cor),
+    hdi_low = hdi(cor, credMass = 0.95)[1],
+    hdi_high = hdi(cor, credMass = 0.95)[2],
+    .groups = "drop"
+  )
+
+
+# Format text label with median + HDI
+summary_cor <- summary_cor %>%
+  mutate(label = sprintf("%.2f\n[%.2f, %.2f]", median, hdi_low, hdi_high))
+
+
+
+ordered_m1 <- c("threshold_m1", "slope_m1", "lapse_m1", "rt_int_m1", "rt_beta_m1", "rt_sd_m1", "rt_ndt_m1", "rho_m1")
+ordered_m2 <- c("threshold_m2", "slope_m2", "lapse_m2", "alpha_m2", "beta_m2", "delta_m2", "rt_ndt_m2")
+
+# Labels
+param_labels_m1 <- c(
+  "threshold_m1" = "Threshold",
+  "slope_m1"     = "Slope",
+  "lapse_m1"     = "Lapse",
+  "rt_int_m1"    = "RT Intercept",
+  "rt_beta_m1"   = "RT Slope",
+  "rt_sd_m1"     = "RT SD",
+  "rt_ndt_m1"    = "NDT",
+  "rho_m1"       = "ρ"
+)
+
+param_labels_m2 <- c(
+  "threshold_m2" = "Threshold",
+  "slope_m2"     = "Slope",
+  "lapse_m2"     = "Lapse",
+  "alpha_m2"     = "Boundary",
+  "beta_m2"      = "Bias",
+  "delta_m2"     = "Drift rate",
+  "rt_ndt_m2"    = "NDT"
+)
+
+
+# Plot matrix-style heatmap with labels
+corplot = summary_cor %>% mutate(
+  var1_label = param_labels_m1[var1],
+  var2_label = param_labels_m2[var2],
+  var1_label = factor(var1_label, levels = param_labels_m1[ordered_m1]),
+  var2_label = factor(var2_label, levels = param_labels_m2[ordered_m2])
+) %>% 
+  ggplot(aes(x = var1_label, y = var2_label, fill = median)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = label), size = 2) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0,
+                       name = "Median\nCorr", breaks = c(0.75,0,-0.50), labels = c("0.75","0","-0.50")) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "top",
+        panel.grid = element_blank()) +
+  labs(x = "CBM parameters", y = "DDM parameters")
+
+corplot
+
+
+ggsave(here::here("Figures","subject level","subject_corplot_PSY.tiff"),corplot,width = 7,height = 5,dpi = 300, units = "in")
+

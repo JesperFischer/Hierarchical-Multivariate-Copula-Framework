@@ -206,10 +206,10 @@ model {
   
   gm[1] ~ normal(0,5);
   gm[2] ~ normal(-1.5,0.5);
-  gm[3] ~ normal(-3,1);
-  gm[4] ~ normal(-1,0.25);
+  gm[3] ~ normal(-4,1);
+  gm[4] ~ normal(-1.2,0.25);
   gm[5] ~ normal(1.5,0.5);
-  gm[6] ~ normal(-1,0.25);  
+  gm[6] ~ normal(-1.2,0.25);  
 
   to_vector(z_expo) ~ std_normal();
 
@@ -218,7 +218,7 @@ model {
   tau_u[3] ~ normal(0.6,0.2);
   tau_u[4] ~ normal(0.6,0.2);
   tau_u[5] ~ normal(0.6,0.2);
-  tau_u[6] ~ normal(0.5,0.1);  
+  tau_u[6] ~ normal(0.4,0.1);  
 
   rt_ndt ~ normal(0.3,0.05);
   
@@ -256,24 +256,5 @@ generated quantities {
   real tau_rt_sd = tau_u[6];
              
 
-  // 
-  // matrix[N,2] log_lik_cop_full;
-  // 
-  // 
-  // vector[N] log_lik_bin = rep_vector(0,N);
-  // vector[N] log_lik_rt  = rep_vector(0,N);
-  // vector[N] log_lik = rep_vector(0,N);
-  // 
-  // log_lik_cop_full = gauss_copula_cholesky_pointwise_full(u_mix, rho_chol);
-  // 
-  // 
-  // for(n in 1:N){
-  //   
-  //   log_lik_rt[n] = lognormal_lpdf(RT[n] - rt_ndt | rt_int + rt_beta * entropy(expect[n]), (rt_sd));
-  //   
-  //   log_lik_bin[n] = binomial_lpmf(binom_y[n] | 1, expect[n]);
-  //   
-  //   log_lik[n] = log_lik_rt[n] + log_lik_bin[n] + log_lik_cop_full[n,1];
-  // }
   
 }

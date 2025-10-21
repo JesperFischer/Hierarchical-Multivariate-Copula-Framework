@@ -6,7 +6,6 @@ logistic_psychometric = function(x,threshold,slope,lapse){
 entropy = function(p){
   return(-(p*log(p)+(1-p)*log(1-p)))
 }
-
 #shannon_entropy
 generate_trial_shannon_entropy_rt = function(x,threshold,slope,lapse,participant,
                                              rt_int,rt_beta, rt_sd, rt_ndt, rho){
@@ -48,8 +47,6 @@ generate_trial_ddm = function(x,threshold,slope,lapse,participant,
 
   return(data %>% mutate(expectation = expectation,x = x,participant = participant, trial = 1:length(expectation)))
 }
-
-
 
 #ekstra math functions
 
@@ -253,6 +250,7 @@ fitter_cop_rt = function(samples){
   rt_model <- cmdstanr::cmdstan_model(here::here("Simulations","Psychometric","model_recovery_estimation","stanmodels","subj_ndt.stan"))
   nort_model <- cmdstanr::cmdstan_model(here::here("Simulations","Psychometric","model_recovery_estimation","stanmodels","no_rt.stan"))
   ddm_model <- cmdstanr::cmdstan_model(here::here("Simulations","Psychometric","model_recovery_estimation","stanmodels","hier_ddm.stan"))
+  rt2_model <- cmdstanr::cmdstan_model(here::here("Simulations","Psychometric","model_recovery_estimation","stanmodels","test_subj_ndt.stan"))
   
   fit_rt = rt_model$sample(data = sim_data_x,
                              iter_warmup = samples,
@@ -265,6 +263,7 @@ fitter_cop_rt = function(samples){
   
   rt_loo_bin = fit_rt$loo("log_lik_bin")
   rt_loo_full = fit_rt$loo("log_lik")
+  
   
   
   divs_rt = fit_rt$diagnostic_summary()
@@ -327,7 +326,6 @@ fitter_cop_rt = function(samples){
   divs_nort = fit_nort$diagnostic_summary()
 
 
-  
   group_means_names = c("mu_threshold","mu_slope","mu_lapse")
   
   groupmeans_nort = data.frame(fit_nort$summary(group_means_names)) %>% mutate(max_div = max(divs_nort$num_divergent),
@@ -410,7 +408,6 @@ fitter_cop_rt = function(samples){
   return(list(full_loo, bin_loo,rt_list,nort_list))
       
 }
-
 
 fitter_ddm = function(samples){
   

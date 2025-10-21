@@ -29,52 +29,20 @@ functions {
             - std_normal_lpdf(to_vector(to_matrix(q)));
   }
 
-  vector gauss_copula_cholesky_pointwise(matrix u, matrix L) {
-    int N = rows(u);
-    int J = cols(u);
-    matrix[J,J] Sigma_inv = chol2inv(L);
-    vector[J] inv_sigma_inv = inv(diagonal(Sigma_inv));
-    matrix[N, J] log_lik_mat;
-    matrix[N, J] G;
-    matrix[N, J] q;
-
-    for (n in 1:N) {
-      q[n] = inv_Phi(u[n]);
-    }
-
-    G = q * Sigma_inv;
-
-    for (n in 1:N) {
-      for (j in 1:J) {
-        log_lik_mat[n, j] = normal_lpdf(q[n, j] | q[n, j] - G[n, j] * inv_sigma_inv[j], sqrt(inv_sigma_inv[j]))
-                              - std_normal_lpdf(q[n, j]);
-      }
-    }
-    return to_vector(log_lik_mat);
-  }
  
-  matrix gauss_copula_cholesky_pointwise_full(matrix u, matrix L) {
+   vector gauss_copula_cholesky_per_row(matrix u, matrix L) {
     int N = rows(u);
-    int J = cols(u);
-    matrix[J,J] Sigma_inv = chol2inv(L);
-    vector[J] inv_sigma_inv = inv(diagonal(Sigma_inv));
-    matrix[N, J] log_lik_mat;
-    matrix[N, J] G;
-    matrix[N, J] q;
+    int D = cols(u);
+    array[N] row_vector[D] q;
+    vector[N] loglik;
 
     for (n in 1:N) {
-      q[n] = inv_Phi(u[n]);
+        q[n,] = inv_Phi(u[n,]);
+        loglik[n] = multi_normal_cholesky_lpdf(to_row_vector(q[n,]) |
+                                                 rep_row_vector(0, D), L) - std_normal_lpdf(to_vector(to_matrix(q[n,])));
     }
 
-    G = q * Sigma_inv;
-
-    for (n in 1:N) {
-      for (j in 1:J) {
-        log_lik_mat[n, j] = normal_lpdf(q[n, j] | q[n, j] - G[n, j] * inv_sigma_inv[j], sqrt(inv_sigma_inv[j]))
-                              - std_normal_lpdf(q[n, j]);
-      }
-    }
-    return (log_lik_mat);
+    return loglik;
   }
 
   matrix uvar_bounds(array[] int binom_y, vector gm,vector tau_u, matrix z_expo,array[] int S_id, int S, vector x ,array[] int id_ind, int is_upper) {
@@ -253,7 +221,7 @@ generated quantities {
   real tau_rt_int = tau_u[3];
   real tau_rt_beta = tau_u[4];
   real tau_rt_sd = tau_u[5];
-  matrix[N,2] log_lik_cop_full;
+  vector[N] log_lik_cop_full;
 
 
   vector[N] log_lik_bin = rep_vector(0,N);
@@ -261,7 +229,7 @@ generated quantities {
   vector[N] log_lik = rep_vector(0,N);
   
   for(s in 1:S){
-     log_lik_cop_full[starts[s]:ends[s],] = gauss_copula_cholesky_pointwise_full(u_mix[starts[s]:ends[s],], rho_chol[s]);
+     log_lik_cop_full[starts[s]:ends[s]] = gauss_copula_cholesky_per_row(u_mix[starts[s]:ends[s],], rho_chol[s]);
   }
 
   for(n in 1:N){
@@ -270,7 +238,7 @@ generated quantities {
 
     log_lik_bin[n] = binomial_lpmf(binom_y[n] | 1, expect[n]);
 
-    log_lik[n] = log_lik_rt[n] + log_lik_bin[n] + log_lik_cop_full[n,1];
+    log_lik[n] = log_lik_rt[n] + log_lik_bin[n] + log_lik_cop_full[n];
   }
  
 }

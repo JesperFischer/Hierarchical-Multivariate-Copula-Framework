@@ -269,7 +269,6 @@ fitter_cop_rt = function(samples){
   sim_data_x = sim_data[[2]]
   
   
-  
   rt_model <- cmdstanr::cmdstan_model(here::here("Simulations","Learning","model_recovery_estimation","stanmodels","rw_rt.stan"))
   nort_model <- cmdstanr::cmdstan_model(here::here("Simulations","Learning","model_recovery_estimation","stanmodels","rw_nort.stan"))
   ddm_model <- cmdstanr::cmdstan_model(here::here("Simulations","Learning","model_recovery_estimation","stanmodels","rw_ddm.stan"))
@@ -322,14 +321,19 @@ fitter_cop_rt = function(samples){
     mutate(trials = 60, subjects = 10)
   
   
-  simulated_subj_param = data.frame(sim_data[[1]][subj_names]) %>% mutate(subj_id = as.character(1:10)) %>% pivot_longer(-subj_id, values_to = "simulated",names_to = "variable")
+  simulated_subj_param = data.frame(sim_data[[1]][subj_names]) %>% 
+    mutate(subj_id = as.character(1:10)) %>% 
+    pivot_longer(-subj_id, values_to = "simulated",names_to = "variable")
   
   subj_parameters_rt = inner_join(subj_parameters,simulated_subj_param)
   
   rt_list = list(groupmeans_rt,groupvar_rt,subj_parameters_rt)
   
   
-  ########### fiitting no response time
+  #############################################################################################
+  ##############################  fiitting no response time ###################################
+  #############################################################################################  
+  
   
   fit_nort = nort_model$sample(data = sim_data_x,
                                iter_warmup = samples,
@@ -343,9 +347,7 @@ fitter_cop_rt = function(samples){
   
   nort_loo = fit_nort$loo()
   
-  
   divs_nort = fit_nort$diagnostic_summary()
-  
   
   
   group_means_names = c("mu_learningrate","mu_e0")
@@ -383,7 +385,9 @@ fitter_cop_rt = function(samples){
   
   
   
-  simulated_subj_param = data.frame(sim_data[[1]][subj_names]) %>% mutate(subj_id = as.character(1:10)) %>% pivot_longer(-subj_id, values_to = "simulated",names_to = "variable")
+  simulated_subj_param = data.frame(sim_data[[1]][subj_names]) %>% 
+    mutate(subj_id = as.character(1:10)) %>%
+    pivot_longer(-subj_id, values_to = "simulated",names_to = "variable")
   
   subj_parameters_nort = inner_join(subj_parameters,simulated_subj_param)
   
@@ -391,9 +395,10 @@ fitter_cop_rt = function(samples){
   nort_list = list(groupmeans_nort,groupvar_nort,subj_parameters_nort)
   
   
-  ####### fit ddm
+  #############################################################################################
+  ##############################  fiitting  DDM   #############################################
+  #############################################################################################
   
-  data.frame(sim_data_x) %>% ggplot(aes(x = expectation))
   
   fit_ddm = ddm_model$sample(data = sim_data_x,
                              iter_warmup = samples,
@@ -408,6 +413,62 @@ fitter_cop_rt = function(samples){
   ddm_loo = fit_ddm$loo()
   
   divs_ddm = fit_ddm$diagnostic_summary()
+  
+  
+  
+  
+  group_means_names = c("mu_learningrate","mu_e0","mu_alpha","mu_beta","mu_delta")
+  
+  sim_mean_param = c("mu_learningrate","mu_e0")
+  
+  groupmeans_ddm = data.frame(fit_ddm$summary(group_means_names)) %>% mutate(max_div = max(divs_ddm$num_divergent),
+                                                                               max_tree = max(divs_ddm$num_max_treedepth),
+                                                                               estimation_time = fit_ddm$time()$total) %>% 
+    mutate(simulated = c(as.numeric(data.frame(sim_data[[1]][sim_mean_param])),NA,NA,NA)) %>% 
+    mutate(simulated_model = "DDM")%>% 
+    mutate(trials = 60, subjects = 10)
+  
+  
+  
+  group_var_names = c("tau_learningrate","tau_e0","tau_alpha","tau_beta","tau_delta")
+  
+  sim_var_param = c("tau_learningrate","tau_e0")
+  
+  groupvar_ddm = data.frame(fit_ddm$summary(group_var_names)) %>% mutate(max_div = max(divs_ddm$num_divergent),
+                                                                           max_tree = max(divs_ddm$num_max_treedepth),
+                                                                           estimation_time = fit_ddm$time()$total) %>% 
+    mutate(simulated = c(as.numeric(data.frame(sim_data[[1]][sim_var_param])),NA,NA,NA)) %>% 
+    mutate(simulated_model = "DDM")%>% 
+    mutate(trials = 60, subjects = 10)
+  
+  
+  subj_names = c("learningrate","e0","alpha","beta","delta")
+  
+  sim_subj_names = c("learningrate","e0")
+  
+  subj_parameters = data.frame(fit_ddm$summary(subj_names)) %>% mutate(max_div = max(divs_ddm$num_divergent),
+                                                                        max_tree = max(divs_ddm$num_max_treedepth),
+                                                                        estimation_time = fit_ddm$time()$total) %>% 
+    mutate(
+      subj_id = str_extract(variable, "\\[\\d+\\]") %>% str_remove_all("[\\[\\]]"),
+      variable = str_remove(variable, "\\[\\d+\\]"),
+    ) %>% mutate(simulated_model = "DDM")%>% 
+    mutate(trials = 60, subjects = 10)
+  
+  simulated_subj_param = data.frame(sim_data[[1]][sim_subj_names]) %>% 
+    mutate(subj_id = as.character(1:10)) %>% 
+    pivot_longer(-subj_id, values_to = "simulated",names_to = "variable")
+  
+  subj_parameters_ddm = full_join(subj_parameters,simulated_subj_param)
+  
+  
+  ddm_list = list(groupmeans_ddm,groupvar_ddm,subj_parameters_ddm)
+  
+  
+  
+  #############################################################################################
+  ##########################  Leave one out crossvalidation and return ########################
+  #############################################################################################
   
   
   full_loo = data.frame(loo::loo_compare(list(rt = rt_loo_full, ddm = ddm_loo))) %>% 
@@ -428,7 +489,7 @@ fitter_cop_rt = function(samples){
   
   
   
-  return(list(full_loo, bin_loo,rt_list,nort_list))
+  return(list(full_loo, bin_loo,rt_list,nort_list,ddm_list,sim_data))
   
 }
 
@@ -460,8 +521,64 @@ fitter_ddm = function(samples){
   divs_rt = fit_rt$diagnostic_summary()
   
   
+  group_means_names_rt = c("mu_learningrate","mu_e0")
   
-  ########### fiitting no response time
+  groupmeans_rt = data.frame(fit_rt$summary(group_means_names_rt)) %>% mutate(max_div = max(divs_rt$num_divergent),
+                                                                             max_tree = max(divs_rt$num_max_treedepth),
+                                                                             estimation_time = fit_rt$time()$total)
+  
+  groupmeans_rt = full_join(groupmeans_rt,
+            data.frame(
+              variable = names(sim_data[[1]][grepl("mu_",names(sim_data[[1]]))]),
+              simulation = unlist(sim_data[[1]][grepl("mu_",names(sim_data[[1]]))]),
+              row.names = NULL
+            )) %>%  mutate(trials = 60, subjects = 10,simulated_model = "RT")
+  
+  
+  group_var_names_rt = c("tau_learningrate","tau_e0")
+  
+  groupvar_rt = data.frame(fit_rt$summary(group_var_names_rt)) %>% mutate(max_div = max(divs_rt$num_divergent),
+                                                                         max_tree = max(divs_rt$num_max_treedepth),
+                                                                         estimation_time = fit_rt$time()$total)
+  
+  
+  groupvar_rt = full_join(groupvar_rt,
+                            data.frame(
+                              variable = names(sim_data[[1]][grepl("tau_",names(sim_data[[1]]))]),
+                              simulation = unlist(sim_data[[1]][grepl("tau_",names(sim_data[[1]]))]),
+                              row.names = NULL
+                            )) %>%  mutate(trials = 60, subjects = 10,simulated_model = "RT")
+  
+  
+  subj_names = c("learningrate","e0")
+  
+  subj_parameters = data.frame(fit_rt$summary(subj_names)) %>% mutate(max_div = max(divs_rt$num_divergent),
+                                                                       max_tree = max(divs_rt$num_max_treedepth),
+                                                                       estimation_time = fit_rt$time()$total) %>% 
+    mutate(
+      subj_id = str_extract(variable, "\\[\\d+\\]") %>% str_remove_all("[\\[\\]]"),
+      variable = str_remove(variable, "\\[\\d+\\]"),
+    )%>% 
+    mutate(trials = 60, subjects = 10,simulated_model = "RT")
+  
+  
+  first = names(sim_data[[1]])[!grepl("mu_",names(sim_data[[1]]))]
+  all_subj_names = first[!grepl("tau_",(first))]
+  
+  simulated_subj_param = data.frame(sim_data[[1]][all_subj_names]) %>% 
+    mutate(subj_id = as.character(1:10)) %>% 
+    pivot_longer(-subj_id, values_to = "simulated",names_to = "variable")
+  
+  
+  subj_parameters_rt = full_join(subj_parameters,simulated_subj_param)
+  
+  rt_list = list(groupmeans_rt,groupvar_rt,subj_parameters_rt)
+  
+  
+  
+  #############################################################################################
+  ##############################  fiitting no response time ###################################
+  #############################################################################################  
   
   fit_nort = nort_model$sample(data = sim_data_x,
                                iter_warmup = samples,
@@ -474,14 +591,70 @@ fitter_ddm = function(samples){
   
   
   nort_loo = fit_nort$loo()
-  
-  
   divs_nort = fit_nort$diagnostic_summary()
   
   
+  group_means_names_rt = c("mu_learningrate","mu_e0")
+  
+  groupmeans_nort = data.frame(fit_nort$summary(group_means_names_rt)) %>% mutate(max_div = max(divs_nort$num_divergent),
+                                                                              max_tree = max(divs_nort$num_max_treedepth),
+                                                                              estimation_time = fit_nort$time()$total)
+  
+  groupmeans_nort = full_join(groupmeans_rt,
+                            data.frame(
+                              variable = names(sim_data[[1]][grepl("mu_",names(sim_data[[1]]))]),
+                              simulation = unlist(sim_data[[1]][grepl("mu_",names(sim_data[[1]]))]),
+                              row.names = NULL
+                            )) %>%  mutate(trials = 60, subjects = 10,simulated_model = "RT")
   
   
-  ####### fit ddm
+  group_var_names_rt = c("tau_learningrate","tau_e0")
+  
+  groupvar_nort = data.frame(fit_nort$summary(group_var_names_rt)) %>% mutate(max_div = max(divs_nort$num_divergent),
+                                                                          max_tree = max(divs_nort$num_max_treedepth),
+                                                                          estimation_time = fit_nort$time()$total)
+  
+  
+  groupvar_nort = full_join(groupvar_rt,
+                          data.frame(
+                            variable = names(sim_data[[1]][grepl("tau_",names(sim_data[[1]]))]),
+                            simulation = unlist(sim_data[[1]][grepl("tau_",names(sim_data[[1]]))]),
+                            row.names = NULL
+                          )) %>%  mutate(trials = 60, subjects = 10,simulated_model = "RT")
+  
+  
+  subj_names = c("learningrate","e0")
+  
+  subj_parameters = data.frame(fit_nort$summary(subj_names)) %>% mutate(max_div = max(divs_nort$num_divergent),
+                                                                      max_tree = max(divs_nort$num_max_treedepth),
+                                                                      estimation_time = fit_nort$time()$total) %>% 
+    mutate(
+      subj_id = str_extract(variable, "\\[\\d+\\]") %>% str_remove_all("[\\[\\]]"),
+      variable = str_remove(variable, "\\[\\d+\\]"),
+    )%>% 
+    mutate(trials = 60, subjects = 10,simulated_model = "RT")
+  
+  
+  
+  first = names(sim_data[[1]])[!grepl("mu_",names(sim_data[[1]]))]
+  all_subj_names = first[!grepl("tau_",(first))]
+  
+  simulated_subj_param = data.frame(sim_data[[1]][all_subj_names]) %>% 
+    mutate(subj_id = as.character(1:10)) %>% 
+    pivot_longer(-subj_id, values_to = "simulated",names_to = "variable")
+  
+  
+  subj_parameters_nort = full_join(subj_parameters,simulated_subj_param)
+  
+  nort_list = list(groupmeans_nort,groupvar_nort,subj_parameters_nort)
+  
+  
+  
+  
+  #############################################################################################
+  ##############################  fiitting  DDM   #############################################
+  #############################################################################################
+  
   
   fit_ddm = ddm_model$sample(data = sim_data_x,
                              iter_warmup = samples,
@@ -499,16 +672,16 @@ fitter_ddm = function(samples){
   
   group_means_names = names(sim_data[[1]])[grepl("mu_",names(sim_data[[1]]))]
   
-  groupmeans_ddm = data.frame(fit_ddm$summary(group_means_names)) %>% mutate(max_div = max(divs_rt$num_divergent),
-                                                                             max_tree = max(divs_rt$num_max_treedepth),
+  groupmeans_ddm = data.frame(fit_ddm$summary(group_means_names)) %>% mutate(max_div = max(divs_ddm$num_divergent),
+                                                                             max_tree = max(divs_ddm$num_max_treedepth),
                                                                              estimation_time = fit_ddm$time()$total) %>% 
     mutate(simulated = as.numeric(data.frame(sim_data[[1]][grepl("mu_",names(sim_data[[1]]))])))%>% 
     mutate(trials = 60, subjects = 10,simulated_model = "DDM")
   
   group_var_names = names(sim_data[[1]])[grepl("tau_",names(sim_data[[1]]))]
   
-  groupvar_ddm = data.frame(fit_ddm$summary(group_var_names)) %>% mutate(max_div = max(divs_rt$num_divergent),
-                                                                         max_tree = max(divs_rt$num_max_treedepth),
+  groupvar_ddm = data.frame(fit_ddm$summary(group_var_names)) %>% mutate(max_div = max(divs_ddm$num_divergent),
+                                                                         max_tree = max(divs_ddm$num_max_treedepth),
                                                                          estimation_time = fit_ddm$time()$total) %>% 
     mutate(simulated = as.numeric(data.frame(sim_data[[1]][grepl("tau_",names(sim_data[[1]]))])))%>% 
     mutate(trials = 60, subjects = 10,simulated_model = "DDM")
@@ -517,8 +690,8 @@ fitter_ddm = function(samples){
   first = names(sim_data[[1]])[!grepl("mu_",names(sim_data[[1]]))]
   subj_names = first[!grepl("tau_",(first))]
   
-  subj_parameters = data.frame(fit_ddm$summary(subj_names)) %>% mutate(max_div = max(divs_rt$num_divergent),
-                                                                       max_tree = max(divs_rt$num_max_treedepth),
+  subj_parameters = data.frame(fit_ddm$summary(subj_names)) %>% mutate(max_div = max(divs_ddm$num_divergent),
+                                                                       max_tree = max(divs_ddm$num_max_treedepth),
                                                                        estimation_time = fit_ddm$time()$total) %>% 
     mutate(
       subj_id = str_extract(variable, "\\[\\d+\\]") %>% str_remove_all("[\\[\\]]"),
@@ -554,6 +727,11 @@ fitter_ddm = function(samples){
     mutate(trials = 60, subjects = 10,simulated_model = "DDM")
   
   
-  return(list(full_loo, bin_loo,ddm_list))
+  return(list(full_loo, bin_loo,rt_list, nort_list,ddm_list,sim_data))
   
 }
+
+
+rt = fitter_cop_rt(500)
+
+ddm = fitter_ddm(500)

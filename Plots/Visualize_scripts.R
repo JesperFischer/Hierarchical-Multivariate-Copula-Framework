@@ -1,8 +1,8 @@
 font = "sans"
-font_size = 12
-font_size_small = 8 
-axis_width = 1 
-tick_width = 1
+font_size = 26
+font_size_small = 16
+axis_width = 1.5
+tick_width = 1.5
 
 text = ggplot2::theme(text = ggplot2::element_text(family = font, size = font_size))
 theme = theme_classic()
@@ -146,7 +146,7 @@ plot_figure1 = function(rerun = F, seed = 1997){
     rts_rw = priors_rw %>% rename(trialx = trial) %>% group_by(sim_id,trialx) %>% summarize(RT = median(exp(mu_rts))) %>% 
       ggplot(aes(x = trialx, y = RT, group = sim_id))+
       geom_line(aes(col = "Prior"),alpha = 0.5, show.legend = F)+
-      geom_line(data = qq_summar_rt, aes(x = trialx, y = rt, group = draw,col = "Posterior"),alpha = 0.3, show.legend = F)+
+      geom_line(data = posterior_draws_rw, aes(x = trialx, y = rt, group = draw,col = "Posterior"),alpha = 0.3, show.legend = F)+
       geom_pointrange(data = sim_datax_rw, aes(x = trialx, y = murts, ymin = murts-se_murts, ymax = murts+se_murts, col = "Data"),alpha = 0.5, show.legend = F)+
       theme_classic()+
       scale_color_manual(name = "Model Predictions & Data",values = c("black","orange","lightblue3"))+
@@ -223,7 +223,7 @@ plot_figure1 = function(rerun = F, seed = 1997){
       print(s)
       xs = seq(-40,40, length.out = 60)
       
-      minRT = min(sim_data %>% filter(S == S_id) %>% .$RT)
+      minRT = min(data.frame(sim_data_data) %>% filter(S == S_id) %>% .$RT)
       
       parameters = paste0(c("threshold","slope","lapse","rt_int","rt_beta","rt_ndt","rt_sd","rho"), "[",s,"]")
       
@@ -357,7 +357,7 @@ plot_figure1 = function(rerun = F, seed = 1997){
     combined_plot
     
     ggsave(here::here("Figures","plot_1.tiff"),combined_plot, dpi = 600,
-           height = 6,width = 12)
+           height = 20,width = 40, units = "cm")
     
     return(combined_plot)
   }else{
@@ -822,7 +822,7 @@ plot_figure2 = function(){
   combined
     
   ggsave(here::here("Figures","plot_2.tiff"),combined, dpi = 600,
-         height = 6,width = 12)
+         height = 20,width = 40, units = "cm")
   
   # ggsave(here::here("Figures","plot_2_psy.tiff"),comb_psycho, dpi = 600,
   #        width = 12, height = 6)
@@ -916,7 +916,7 @@ plot_figure3 = function(){
     geom_pointrange(aes(xmin = elpd_diff - 2 * se_diff, xmax = elpd_diff + 2 * se_diff), alpha = 0.1, size = 0.1) +
     geom_point(size = 0.1) +
     geom_vline(aes(xintercept = 0), linetype = 2) +
-    scale_color_manual(values = c("blue","red"))+
+    scale_color_manual(values = c("darkgreen","red"))+
     scale_x_continuous(" ",breaks = x_breaks, labels = x_labels, limits = c(-150,600)) +
     theme_classic()+
     ggtitle("Psychophysical Paradigm")+
@@ -1018,13 +1018,14 @@ plot_figure3 = function(){
     mutate(sim_id = factor(sim_id, levels = unique(sim_id))) %>% 
     mutate(sim_id = as.numeric(as.factor(sim_id))) %>% 
     ggplot(aes(y = sim_id, x = elpd_diff)) +
-    geom_pointrange(aes(xmin = elpd_diff - 2 * se_diff, xmax = elpd_diff + 2 * se_diff), col = "blue", alpha = 0.1, size = 0.1)+
-    geom_point(col = "blue",alpha = 0.5, size = 0.1)+
+    geom_pointrange(aes(xmin = elpd_diff - 2 * se_diff, xmax = elpd_diff + 2 * se_diff), col = "darkgreen", alpha = 0.1, size = 0.1)+
+    geom_point(col = "darkgreen",alpha = 0.5, size = 0.1)+
     geom_vline(aes(xintercept = 0), linetype = 2)+
     scale_x_continuous("ELPD Difference",breaks = x_breaks, labels = x_labels, limits = c(-15,19)) +
     coord_cartesian(ylim = c(20,nrow(rtss)-20))+
     theme_classic()+
-    ylab("Ordered simulations") +
+    # ylab("Ordered simulations") +
+    ylab("") +
     theme+text+
     theme(strip.background = element_blank(),
           strip.text = element_blank(),
@@ -1151,7 +1152,7 @@ plot_figure3 = function(){
     ggplot(aes(y = sim_id, x = elpd_diff, col = `Simulated model`)) +
     geom_pointrange(aes(xmin = elpd_diff - 2 * se_diff, xmax = elpd_diff + 2 * se_diff), alpha = 0.1, size = 0.1, show.legend = F) +
     geom_point(size = 0.1, show.legend = F) +
-    scale_color_manual(values = c("blue","red"))+
+    scale_color_manual(values = c("darkgreen","red"))+
     geom_vline(aes(xintercept = 0), linetype = 2) +
     ggtitle("Learning Paradigm")+
     scale_x_continuous(" ",breaks = x_breaks, labels = x_labels, limits = c(-200,600)) +
@@ -1246,8 +1247,8 @@ plot_figure3 = function(){
     arrange(desc(elpd_diff)) %>% mutate(sim_id = factor(sim_id, levels = unique(sim_id))) %>% 
     ggplot(aes(y = sim_id, x = elpd_diff)) +
     facet_wrap(~paradigm)+
-    geom_pointrange(aes(xmin = elpd_diff - 2 * se_diff, xmax = elpd_diff + 2 * se_diff), col = "blue", alpha = 0.1, size = 0.1)+
-    geom_point(col = "blue",alpha = 0.5, size = 0.1)+
+    geom_pointrange(aes(xmin = elpd_diff - 2 * se_diff, xmax = elpd_diff + 2 * se_diff), col = "darkgreen", alpha = 0.1, size = 0.1)+
+    geom_point(col = "darkgreen",alpha = 0.5, size = 0.1)+
     geom_vline(aes(xintercept = 0), linetype = 2)+
     scale_x_continuous("ELPD Difference",breaks = x_breaks, labels = x_labels, limits = c(-13,13)) +
     coord_cartesian(ylim = c(20,1000))+
@@ -1301,8 +1302,9 @@ plot_figure3 = function(){
   
 
   ggsave(here::here("Figures","plot_3.tiff"),combined_plot,
-         width = 12,
-         height = 6,
+         width = 40,
+         height = 20,
+         units = "cm",
          dpi = 600)
   
   
@@ -1534,7 +1536,7 @@ plot_figure4 = function(){
     geom_ribbon(stat = 'function', fun = myfun,
                 mapping = aes(ymin = after_stat(y), ymax = -Inf, fill = "Smaller SD with only choices"),
                 alpha = 0.2) +
-    scale_fill_manual(values = c("Smaller SD with only choices" = "lightblue", "Smaller SD with CBM" = "orange"),
+    scale_fill_manual(values = c("Smaller SD with only choices" = "#3A5D9c", "Smaller SD with CBM" = "orange"),
                       name = " ")+
     scale_alpha_manual(values = c("1" = 0.15, "2" = 0.05,"6" = 0.025,"7" = 0.025),  # Adjust alpha levels
                        name = "Variable Type")+
@@ -1542,7 +1544,7 @@ plot_figure4 = function(){
     theme(legend.position = "top")+
     xlab("Estimated  SD with CBM")+
     ylab("Estimated  SD with only choices")+
-    ggtitle("Psychometric Paradigm")+
+    # ggtitle("Psychometric Paradigm")+
     theme_classic()+
     facetted_pos_scales(
       y = list(
@@ -1597,14 +1599,14 @@ plot_figure4 = function(){
     geom_ribbon(stat = 'function', fun = myfun,
                 mapping = aes(ymin = after_stat(y), ymax = -Inf, fill = "Smaller SD with only choices"),
                 alpha = 0.2, show.legend = F) +
-    scale_fill_manual(values = c("Smaller SD with only choices" = "lightblue", "Smaller SD with CBM" = "orange"),
+    scale_fill_manual(values = c("Smaller SD with only choices" = "#3A5D9c", "Smaller SD with CBM" = "orange"),
                       name = " ")+
     scale_alpha_manual(values = c("4" = 0.04, "5" = 0.15, "9" = 0.015, "10" = 0.015),  # Adjust alpha levels
                        name = "Variable Type")+guides(alpha = "none")+theme_classic()+
     theme(legend.position = "top")+
     xlab("Estimated  SD with CBM")+
     ylab("Estimated  SD with only choices")+
-    ggtitle("Learning Paradigm")+
+    # ggtitle("Learning Paradigm")+
     theme_classic()+
     scale_x_continuous(breaks = scales::pretty_breaks(n = 3))+
     scale_y_continuous(breaks = scales::pretty_breaks(n = 3))+ 
@@ -1656,7 +1658,7 @@ plot_figure4 = function(){
   
 
   ggsave(here::here("Figures","plot_4.tiff"),plot4, dpi = 600,
-         height = 6,width = 12)
+         height = 20,width = 40, units = "cm")
   
   return(plot4)
 
@@ -1804,7 +1806,7 @@ plot_figure5 = function(rerun = F){
   
   
   ## subject level  no rts
-  rw_rt_nolow <- readRDS(here::here("Real data","Learning","models","rw_nort_nolow.rds"))
+  rw_nort_nolow <- readRDS(here::here("Real data","Learning","models","rw_nort_nolow.rds"))
   
   
   big_df_nort = data.frame()
@@ -1859,7 +1861,7 @@ plot_figure5 = function(rerun = F){
     group_by(trial)  %>% 
     summarize(resp = mean(bin_resp), rt = median(rts), se_resp =  (mean(bin_resp) * (1- mean(bin_resp))) / sqrt(n()), se_rts = sd(rts)/sqrt(n())) %>%
     ggplot(aes(x = trial))+
-    geom_line(data = qq_summar_rt %>% filter(draw %in% draw_id), aes(x = trial, y = resp, group = draw), alpha = alpha, col = "#6CEEF8")+
+    geom_line(data = qq_summar_rt %>% filter(draw %in% draw_id), aes(x = trial, y = resp, group = draw), alpha = alpha, col = "lightgreen")+
     # geom_line(data = qq_summar_nort, aes(x = Difficulty_bin, y = resp, group = draw), alpha = 0.01, col = "black")+
     # geom_line(data = qq_summar_sum_nort, aes(x = trial, y = resps, col = "No RT"))+
     geom_line(data = qq_summar_ddm%>% filter(draw %in% draw_id), aes(x = trial, y = resp, group = draw), alpha = alpha, col = "orange")+
@@ -1870,7 +1872,7 @@ plot_figure5 = function(rerun = F){
     theme_classic()+
     scale_color_manual(name = "Model Predictions & Data", 
                        values = c("DDM" = "red", 
-                                  "CBM" = "blue", 
+                                  "CBM" = "darkgreen", 
                                   "Data" = "black"),
                        breaks = c("Data", "CBM", "DDM"))+
     scale_x_continuous(" ", breaks = scales::pretty_breaks(n = 3))+
@@ -1904,13 +1906,13 @@ plot_figure5 = function(rerun = F){
     group_by(trial) %>% 
     summarize(resp = mean(bin_resp), rt = median(rts), se_resp =  (mean(bin_resp) * (1- mean(bin_resp))) / sqrt(n()), se_rts = sd(rts)/sqrt(n())) %>%
     ggplot(aes(x = trial))+
-    geom_line(data = qq_summar_rt%>% filter(draw %in% draw_id), aes(x = trial, y = rt, group = draw), alpha = alpha, col = "#6CEEF8")+
+    geom_line(data = qq_summar_rt%>% filter(draw %in% draw_id), aes(x = trial, y = rt, group = draw), alpha = alpha, col = "lightgreen")+
     geom_line(data = qq_summar_ddm%>% filter(draw %in% draw_id), aes(x = trial, y = rt, group = draw), alpha = alpha, col = "orange")+
     geom_pointrange(aes(y = rt, ymin = rt-2*se_rts, ymax = rt+2*se_rts, col = "Data"), show.legend = F)+
     geom_line(data = qq_summar_sum_rt, aes(x = trial, y = rts,col = "CBM"), linewidth = 1.1, show.legend = F)+
     geom_line(data = qq_summar_sum_ddm, aes(x = trial, y = rts, col = "DDM"), linewidth = 1.1, show.legend = F)+
     scale_color_manual(name = "Model Predictions & Data", 
-                       values = c("DDM" = "red", 
+                       values = c("DDM" = "darkgreen", 
                                   "CBM" = "blue", 
                                   "Data" = "black"),
                        breaks = c("Data", "CBM", "DDM"))+
@@ -1939,6 +1941,80 @@ plot_figure5 = function(rerun = F){
   rts_rw
   
   
+  # subject level plots:
+  library(zoo)
+  
+  avg = df_rw %>% group_by(Subject) %>%   mutate(roll_avg = zoo::rollmean(bin_resp, 10, fill = NA, align = "right"))
+
+  
+  
+  Binary_sub = big_df_ddm %>% filter(draw %in% unique(big_df_ddm$draw)[1:50]) %>% 
+    ggplot()+
+    geom_line(data = big_df_ddm%>% filter(draw %in% unique(big_df_ddm$draw)[1:50]), aes(x = trial,y = expect, group = draw, col = "DDM",alpha = "DDM"))+
+    geom_line(data = big_df_rt%>% filter(draw %in% unique(big_df_ddm$draw)[1:50]), aes(x = trial,y = expect, group = draw, col = "CBM",alpha = "CBM"))+
+    geom_point(data = df_rw %>% rename(participant = Subject), aes(x = trial, y = bin_resp, col = "Data"), alpha = 0.5)+
+    geom_line(data = avg %>% rename(participant = Subject), aes(x = trial, y = roll_avg, col = "Roll_avg"), alpha = 0.5)+
+    
+    scale_x_continuous(breaks = c(0,100), labels = c("0","100"))+
+    scale_y_continuous(breaks = c(0,0.5,1), labels = c("0","0.5","1"))+
+    scale_color_manual(name = "Model Predictions & Data", 
+                       values = c("DDM" = "orange", 
+                                  "CBM" = "#6CEEF8", 
+                                  "Data" = "black",
+                                  "Roll_avg" = "darkgreen"),
+                       breaks = c("Data", "CBM", "DDM","Roll_avg"))+
+    scale_alpha_manual(values = c("DDM" = 0.1, "CBM" = 0.1, "Data" = 0.3,"Roll_avg" = 1), guide = "none") +
+    
+    facet_wrap(~participant)+
+    theme_classic()+
+    ylab("p(Response == 1)")+
+    xlab("Trial")+
+    theme()+
+    theme(legend.position = "top")
+  
+  
+  ggsave(here::here("Figures","subject level","subject_binary_learning.tiff"),Binary_sub,width = 7,height = 7,dpi = 300, units = "in")
+  
+
+  
+  
+  
+  
+  
+  
+  # hist(df_rw %>% rename(participant = Subject) %>%  group_by(participant) %>% summarize(rt = max(rts)) %>% .$rt)
+  # 
+  # ids = df_rw %>% rename(participant = Subject) %>%  group_by(participant) %>% summarize(rts = max(rts)) %>% 
+  #   mutate(bin = ifelse(rts < 0.8,"1",ifelse(rts<1.2,"2",ifelse( rts < 1.4, "3","4"))))
+  # 
+  
+  rts_sub = big_df_ddm %>% filter(draw %in% unique(big_df_ddm$draw)[1:50]) %>% 
+    ggplot()+
+    geom_line(data = big_df_ddm%>% filter(draw %in% unique(big_df_ddm$draw)[1:50]), aes(x = trial,y = rts, group = draw, col = "DDM",alpha = "DDM"))+
+    geom_line(data = big_df_rt%>% filter(draw %in% unique(big_df_ddm$draw)[1:50]), aes(x = trial,y = rts, group = draw, col = "CBM",alpha = "CBM"))+
+    geom_point(data = df_rw %>% rename(participant = Subject), aes(x = trial, y = rts, col = "Data"), alpha = 0.3)+
+    facet_wrap(~participant)+
+    theme_classic()+
+    coord_cartesian(ylim = c(0.15,2))+
+    scale_x_continuous(breaks = c(0,100), labels = c("0","100"))+
+    scale_y_continuous(breaks = c(0,1,2), labels = c("0","1","2"))+
+    scale_color_manual(name = "Model Predictions & Data", 
+                       values = c("DDM" = "orange", 
+                                  "CBM" = "#6CEEF8", 
+                                  "Binned_Data" = "black"),
+                       breaks = c("Binned_Data", "CBM", "DDM"))+
+    scale_alpha_manual(values = c("DDM" = 0.1, "CBM" = 0.1, "Binned_Data" = 1), guide = "none") +
+    
+    facet_wrap(~participant)+
+    theme_classic()+
+    ylab("Response time (s)")+
+    xlab("Trial")+
+    theme()+
+    theme(legend.position = "top")
+  
+  ggsave(here::here("Figures","subject level","subject_rts_learning.tiff"),rts_sub,width = 7,height = 7,dpi = 300, units = "in")
+  
+  
   
   ############ 
   # psychometric:
@@ -1948,7 +2024,8 @@ plot_figure5 = function(rerun = F){
     mutate(ACC = ifelse(Stimulus == Response,1,0),
            Difficulty  = ifelse(Stimulus == 2, SN , -SN),
            Response = Response-1,
-           Confidence = Confidence/max(Confidence,na.rm = T)) %>% rename(participant = Subj_idx) %>% 
+           Confidence = Confidence/max(Confidence,na.rm = T)) %>% 
+    rename(participant = Subj_idx) %>% 
     group_by(participant) %>% mutate(trial = 1:n())
   
   
@@ -2176,6 +2253,123 @@ plot_figure5 = function(rerun = F){
     group_by(Difficulty_bin) %>% 
     summarize(resp = mean(bin_resp), rt = median(rts), se_resp =  (mean(bin_resp) * (1- mean(bin_resp))) / sqrt(n()), se_rts = sd(rts)/sqrt(n())) %>%
     ggplot(aes(x = Difficulty_bin))+
+    geom_line(data = qq_summar_rt_psy %>% filter(draw %in% draw_id), aes(x = Difficulty_bin, y = resp, group = draw), alpha = alpha, col = "lightgreen")+
+    
+    # geom_line(data = qq_summar_nort, aes(x = Difficulty_bin, y = resp, group = draw), alpha = 0.01, col = "black")+
+    
+    geom_line(data = qq_summar_psy %>% filter(draw %in% draw_id), aes(x = Difficulty_bin, y = resp, group = draw), alpha = alpha, col = "orange")+
+    geom_line(data = qq_summar_sum_psy, aes(x = Difficulty_bin, y = resps, col = "DDM"), linewidth = 1.1, show.legend = F)+
+    geom_line(data = qq_summar_sum_rt_psy, aes(x = Difficulty_bin, y = resps, col = "CBM"), linewidth = 1.1, show.legend = F)+
+    # geom_line(data = qq_summar_sum_nort, aes(x = Difficulty_bin, y = resps, col = "No RT"), linewidth = 1.1)+
+    geom_pointrange(aes(y = resp, ymin = resp-2*se_resp, ymax = resp+2*se_resp, col = "Data"), show.legend = F)+
+    theme_classic()+
+    scale_color_manual(name = "Model Predictions & Data", 
+                       values = c("DDM" = "red", 
+                                  "CBM" = "darkgreen", 
+                                  "Data" = "black"),
+                       breaks = c("Data", "CBM", "DDM"))+
+    scale_x_continuous(" ", breaks = scales::pretty_breaks(n = 3))+
+    scale_y_continuous("P(Response == 1)", breaks = scales::pretty_breaks(n = 3))+  
+    ggtitle("Psychophysical Paradigm")+
+    theme+text+
+    theme(strip.background = element_blank(),
+          strip.text = element_text(size=font_size),
+          legend.position = "top",
+          legend.box = "horizontal",
+          legend.direction="horizontal",
+          legend.key.height = unit(0.5, 'cm'),
+          legend.key.width = unit(0.5, 'cm'),
+          legend.spacing.x = unit(0.35, "cm"),
+          plot.title = element_text(hjust = 0.5, size = font_size), #change legend key height
+          legend.text = element_text(size=font_size_small),
+          axis.text=element_text(size=font_size_small),
+          axis.title=element_text(size=font_size),
+          axis.line=element_line(size=axis_width),
+          axis.ticks=element_line(size=axis_width),
+          axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=0.5))
+  
+  
+  
+  psycho_psycho_psy
+  ## rts
+  
+  rts_psycho_psy = df_psy %>%   ungroup() %>%  mutate(rts = (RT_dec),bin_resp = Response) %>% drop_na() %>%
+    mutate(Difficulty_bin = cut((Difficulty), breaks = 10, labels = FALSE),
+           Difficulty = abs(Difficulty),
+           Difficulty_bin = (Difficulty_bin - min(Difficulty_bin)) / (max(Difficulty_bin) - min(Difficulty_bin)) * (0.3 - (-0.3)) + (-0.3)
+    ) %>%
+    group_by(Difficulty_bin) %>% 
+    summarize(resp = mean(bin_resp), rt = median(rts), se_resp =  (mean(bin_resp) * (1- mean(bin_resp))) / sqrt(n()), se_rts = sd(rts)/sqrt(n())) %>%
+    ggplot(aes(x = Difficulty_bin))+
+    geom_line(data = qq_summar_rt_psy%>% filter(draw %in% draw_id), aes(x = Difficulty_bin, y = rt, group = draw), alpha = alpha, col = "lightgreen")+
+    geom_line(data = qq_summar_psy%>% filter(draw %in% draw_id), aes(x = Difficulty_bin, y = rt, group = draw), alpha = alpha, col = "orange")+
+    geom_line(data = qq_summar_sum_rt_psy, aes(x = Difficulty_bin, y = rts,col = "CBM"), show.legend = F, linewidth = 1.1)+
+    geom_line(data = qq_summar_sum_psy, aes(x = Difficulty_bin, y = rts, col = "DDM"), show.legend = F, linewidth = 1.1)+
+    geom_pointrange(aes(y = rt, ymin = rt-2*se_rts, ymax = rt+2*se_rts, col = "Data"), show.legend = F)+
+    scale_color_manual(name = "Model Predictions & Data", 
+                       values = c("DDM" = "red", 
+                                  "CBM" = "darkgreen", 
+                                  "Data" = "black"),
+                       breaks = c("Data", "CBM", "DDM"))+
+    theme_classic()+
+    scale_x_continuous("Binned stimulus intensity", breaks = scales::pretty_breaks(n = 3))+
+    scale_y_continuous("Response time (s)", breaks = c(0.4,0.7,1.0,1.3), labels = c("0.4","0.7","1.0","1.3"))+
+    theme+text+
+    theme(strip.background = element_blank(),
+          strip.text = element_text(size=font_size),
+          legend.position = "top",
+          legend.box = "horizontal",
+          legend.direction="horizontal",
+          legend.justification='center',
+          legend.key.height = unit(0.5, 'cm'),
+          legend.key.width = unit(0.5, 'cm'),
+          legend.spacing.x = unit(0.35, "cm"),
+          plot.title = element_text(hjust = 0.5, size = font_size), #change legend key height
+          legend.text = element_text(size=font_size_small),
+          axis.text=element_text(size=font_size_small),
+          axis.title=element_text(size=font_size),
+          axis.line=element_line(size=axis_width),
+          axis.ticks=element_line(size=axis_width),
+          axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=0.5))
+  
+  rts_psycho_psy
+  
+  
+  
+  combined_plot = (psycho_psycho_psy | rw_rw) /  (rts_psycho_psy | rts_rw) +plot_layout(tag_level = 'new', guides = "collect")&
+    theme(legend.position = "top",
+          legend.direction="horizontal",
+          legend.text = element_text(size = font_size),  # Increase legend text size
+          legend.title = element_blank(),  # Increase title size if needed
+          legend.key.size = unit(1, "cm"))& 
+    guides(
+      color = guide_legend(override.aes = list(
+        linewidth = c(0.5, 2, 2)
+      ))
+    )
+  
+  combined_plot
+  
+  
+  ggsave(here::here("Figures","plot_5.tiff"),combined_plot, dpi = 600,
+         height = 20,width = 40, units = "cm")
+  
+  return(plot)
+  
+  
+  alpha = 0.1
+  
+  #presentation:
+  ## psychometric fits
+  
+  psycho_psycho_psy = df_psy %>%   ungroup() %>%  mutate(rts = (RT_dec),bin_resp = Response) %>% drop_na() %>%
+    mutate(Difficulty_bin = cut((Difficulty), breaks = 10, labels = FALSE),
+           Difficulty = abs(Difficulty),
+           Difficulty_bin = (Difficulty_bin - min(Difficulty_bin)) / (max(Difficulty_bin) - min(Difficulty_bin)) * (0.3 - (-0.3)) + (-0.3)
+    ) %>%
+    group_by(Difficulty_bin) %>% 
+    summarize(resp = mean(bin_resp), rt = median(rts), se_resp =  (mean(bin_resp) * (1- mean(bin_resp))) / sqrt(n()), se_rts = sd(rts)/sqrt(n())) %>%
+    ggplot(aes(x = Difficulty_bin))+
     geom_line(data = qq_summar_rt_psy %>% filter(draw %in% draw_id), aes(x = Difficulty_bin, y = resp, group = draw), alpha = alpha, col = "#6CEEF8")+
     
     # geom_line(data = qq_summar_nort, aes(x = Difficulty_bin, y = resp, group = draw), alpha = 0.01, col = "black")+
@@ -2259,7 +2453,73 @@ plot_figure5 = function(rerun = F){
   
   
   
-  combined_plot = (psycho_psycho_psy | rw_rw) /  (rts_psycho_psy | rts_rw) +plot_layout(tag_level = 'new', guides = "collect")&
+  # subject level plots:
+  
+  
+  dd = df_psy %>%   ungroup() %>%  group_by(participant) %>% 
+    mutate(Difficulty_bin = cut((Difficulty), breaks = 10, labels = FALSE),
+           Difficulty = abs(Difficulty),
+           Difficulty_bin = (Difficulty_bin - min(Difficulty_bin)) / (max(Difficulty_bin) - min(Difficulty_bin)) * (0.3 - (-0.3)) + (-0.3)
+    ) %>% ungroup() %>% 
+    group_by(participant, Difficulty_bin) %>% summarise(mean = mean(Response), meanRT = mean(RT_dec), seRT = sd(RT_dec)/sqrt(n()))
+  
+  
+  Binary_sub = big_df_ddm_psy %>% filter(draw %in% unique(big_df_ddm_psy$draw)[1:50]) %>% 
+    ggplot()+
+    geom_line(data = big_df_ddm_psy %>% filter(draw %in% unique(big_df_ddm_psy$draw)[1:50]), aes(x = x,y = expectation, group = draw, col = "DDM",alpha = "DDM"))+
+    geom_line(data = big_df_rt_psy%>% filter(draw %in% unique(big_df_rt_psy$draw)[1:50]), aes(x = x,y = expectation, group = draw, col = "CBM",alpha = "CBM"))+
+    geom_point(data = df_psy, aes(x = Difficulty, y = Response), alpha = 0.2)+
+    geom_point(data = dd, aes(x = (Difficulty_bin), y = mean,col = "Binned_Data"))+
+    scale_color_manual(name = "Model Predictions & Data", 
+                       values = c("DDM" = "orange", 
+                                  "CBM" = "#6CEEF8", 
+                                  "Binned_Data" = "darkgreen"),
+                       breaks = c("Binned_Data", "CBM", "DDM"))+
+    scale_alpha_manual(values = c("DDM" = 0.1, "CBM" = 0.1, "Binned_Data" = 1), guide = "none") +
+    
+    facet_wrap(~participant)+
+    theme_classic()+
+    ylab("P(Response == 1)")+
+    xlab("Stimulus intensity")+
+    theme()+
+    theme(legend.position = "top")
+  
+  Binary_sub
+  
+  ggsave(here::here("Figures","subject level","subject_binary_psychometric.tiff"),Binary_sub,width = 7,height = 4,dpi = 300, units = "in")
+  
+  
+  
+  rts_sub = big_df_ddm_psy %>% filter(draw %in% unique(big_df_ddm_psy$draw)[1:50]) %>% 
+    ggplot()+
+    geom_line(data = big_df_ddm_psy %>% filter(draw %in% unique(big_df_ddm_psy$draw)[1:50]), aes(x = x,y = RT_dec, group = draw, col = "DDM", alpha = "DDM"))+
+    geom_line(data = big_df_rt_psy%>% filter(draw %in% unique(big_df_rt_psy$draw)[1:50]), aes(x = x,y = rts, group = draw, col = "CBM", alpha = "CBM"))+
+    geom_point(data = df_psy, aes(x = Difficulty, y = RT_dec), alpha = 0.1)+
+    geom_point(data = dd, aes(x = (Difficulty_bin), y = meanRT,col = "Binned_Data", alpha = "Binned_Data"))+
+    scale_color_manual(name = "Model Predictions & Data", 
+                       values = c("DDM" = "orange", 
+                                  "CBM" = "#6CEEF8", 
+                                  "Binned_Data" = "darkgreen"),
+                       breaks = c("Binned_Data", "CBM", "DDM"))+
+    scale_alpha_manual(values = c("DDM" = 0.1, "CBM" = 0.1, "Binned_Data" = 1), guide = "none") +
+    
+    facet_wrap(~participant)+
+    theme_classic()+
+    coord_cartesian(ylim = c(0.15,5))+
+    ylab("Response time (s)")+
+    xlab("Stimulus intensity")+
+    theme()+
+    theme(legend.position = "top")
+  
+  rts_sub
+  
+  ggsave(here::here("Figures","subject level","subject_rts_psychometric.tiff"),rts_sub,width = 7,height = 4,dpi = 300, units = "in")
+  
+  
+  
+  
+  
+  combined_plot = (psycho_psycho_psy) /  (rts_psycho_psy) +plot_layout(tag_level = 'new', guides = "collect")&
     theme(legend.position = "top",
           legend.direction="horizontal",
           legend.text = element_text(size = font_size),  # Increase legend text size
@@ -2273,11 +2533,14 @@ plot_figure5 = function(rerun = F){
   
   combined_plot
   
+  ggsave(here::here("combined_plot_cogsci_presentation_combine.tiff"),combined_plot,width = 8,height = 5,dpi = 300, units = "in")
   
-  ggsave(here::here("Figures","plot_5.tiff"),combined_plot, dpi = 600,
-         height = 6,width = 12)
   
-  return(plot)
+  
+  
+  
+  
+  
   
 }
  
@@ -2302,6 +2565,7 @@ plot_figure5 = function(rerun = F){
          height = 6,width = 12)
   
   
+
   return(plot)
   
   
