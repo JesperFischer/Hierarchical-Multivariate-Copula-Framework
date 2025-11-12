@@ -59,9 +59,9 @@ fit
 
 # run for all!
 ```{r}
-n_sims <- 2000 # Number of SBC iterations to run
+n_sims <- 50 # Number of SBC iterations to run
 
-generator <- SBC_generator_function(generator_single, N = 60, S = 10)
+generator <- SBC_generator_function(generator_single, N = 60, S = 20)
 
 dataset <- generate_datasets(
   generator, 
@@ -82,12 +82,12 @@ plan(multisession, workers = cores)
 
 results <- compute_SBC(dataset,
                        ensure_num_ranks_divisor = 4,
-                       keep_fits = F,
+                       keep_fits = T,
                        thin_ranks = 20,
                        #cores_per_fit = 10,
                        backend)
 
-save.image(here::here("Simulations","Learning","SBC","results","2000.RData"))
+save.image(here::here("Simulations","Learning","SBC","results","50_fits.RData"))
 
 ```
 

@@ -100,9 +100,9 @@ generator_single <- function(N = 60, S = 20){  # N is the number of data points 
     end = seq(N, by = N, length.out = S)
   )
   
-  if(max(trial_df$rts) > 8){
-    "Error"
-  }
+  # if(max(trial_df$rts) > 8){
+  #   "Error"
+  # }
   
   list(
     variables = list(
